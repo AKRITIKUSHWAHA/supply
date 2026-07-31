@@ -144,17 +144,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     e.preventDefault()
     setIsLoggingIn(true)
 
-    // Find role matching email if entered manually
-    const matchedRole = (Object.keys(demoUsers) as UserRole[]).find(
-      r => demoUsers[r].email.toLowerCase() === email.toLowerCase()
-    ) || selectedRole
-
-    setTimeout(() => {
-      setRole(matchedRole)
-      localStorage.setItem('supplybridge_is_logged_out', 'false')
-      setIsLoggedOutState(false)
-      setIsLoggingIn(false)
-    }, 400)
+    fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const userRole = data.data.user.role.toLowerCase().replace(' ', '_') as UserRole;
+        setRole(userRole);
+        localStorage.setItem('supplybridge_is_logged_out', 'false');
+        localStorage.setItem('supplybridge_token', data.accessToken);
+        setIsLoggedOutState(false);
+      } else {
+        alert(data.message || 'Login failed');
+      }
+    })
+    .catch(err => {
+      console.error('Login error:', err);
+      alert('Network error connecting to backend');
+    })
+    .finally(() => {
+      setIsLoggingIn(false);
+    });
   }
 
   if (isLoggedOut) {
