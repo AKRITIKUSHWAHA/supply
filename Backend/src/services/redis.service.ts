@@ -14,7 +14,7 @@ export const redisClient = new Redis({
 });
 
 redisClient.on('error', (err) => {
-  console.warn('Redis connection error (fallback will be used):', err.message);
+  // console.warn('Redis connection error (fallback will be used):', err.message);
 });
 
 export const getCachedOrFetch = async (key: string, fetchFn: () => Promise<any>, ttlSeconds: number = 60) => {

@@ -8,8 +8,8 @@ export const getProducts = async (req: Request, res: Response) => {
   try {
     const data = await prisma.product.findMany();
     res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch Products' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch Products' });
   }
 };
 

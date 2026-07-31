@@ -11,8 +11,8 @@ export const getSuppliers = async (req: Request, res: Response) => {
       }
     });
     res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch Suppliers' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch Suppliers' });
   }
 };
 

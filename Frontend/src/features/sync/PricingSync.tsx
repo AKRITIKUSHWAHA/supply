@@ -27,25 +27,24 @@ export interface PricingAuditRecord {
   lastSync: string
 }
 
-const INITIAL_RULES: PriceRule[] = [
-  { id: 'r1', name: 'Electronics — Standard Markup',  formula: 'Cost × 1.22 + $5', applies: 'Electronics', products: 45200, active: true },
-  { id: 'r2', name: 'Components — Volume Pricing',    formula: 'Cost × 1.18',      applies: 'PC Components', products: 18400, active: true },
-  { id: 'r3', name: 'Accessories — High Margin',      formula: 'Cost × 1.35',      applies: 'Accessories', products: 8900, active: true },
-  { id: 'r4', name: 'Industrial — Fixed Margin',      formula: 'Cost + 15%',       applies: 'Industrial', products: 6200, active: true },
-]
-
-const INITIAL_AUDIT_RECORDS: PricingAuditRecord[] = [
-  { id: 'pr1', name: 'AMD Ryzen 9 7950X Processor', sku: 'CPU-AMD-7950X', supplier: 'TechParts International', oldPrice: 549.99, newPrice: 579.99, wholesaleCost: 450.00, status: 'synced', lastSync: '4 min ago' },
-  { id: 'pr2', name: 'NVIDIA GeForce RTX 4090 24GB', sku: 'GPU-NV-4090', supplier: 'TechParts International', oldPrice: 1599.99, newPrice: 1699.99, wholesaleCost: 1450.00, status: 'pending', lastSync: '12 min ago' },
-  { id: 'pr3', name: 'DDR5 32GB 6000MHz RGB Kit', sku: 'RAM-DDR5-001', supplier: 'TechParts International', oldPrice: 129.99, newPrice: 119.99, wholesaleCost: 89.00, status: 'synced', lastSync: '18 min ago' },
-  { id: 'pr4', name: 'Samsung 990 Pro 2TB NVMe SSD', sku: 'SSD-990P-2TB', supplier: 'GlobalSource Limited', oldPrice: 169.99, newPrice: 179.99, wholesaleCost: 135.00, status: 'pending', lastSync: '28 min ago' },
-  { id: 'pr5', name: 'Corsair RM1000x 1000W Gold PSU', sku: 'PSU-COR-1000W', supplier: 'GlobalSource Limited', oldPrice: 189.99, newPrice: 199.99, wholesaleCost: 150.00, status: 'synced', lastSync: '1 hr ago' },
-  { id: 'pr6', name: 'Logitech MX Master 3S Mouse', sku: 'MOUSE-MX3S', supplier: 'AcmeDistributors', oldPrice: 99.99, newPrice: 109.99, wholesaleCost: 75.00, status: 'error', lastSync: '3 hr ago' },
-]
+const INITIAL_RULES: PriceRule[] = []
+const INITIAL_AUDIT_RECORDS: PricingAuditRecord[] = []
 
 export const PricingSync: React.FC = () => {
   const [rulesList, setRulesList] = useState<PriceRule[]>(INITIAL_RULES)
   const [auditRecords, setAuditRecords] = useState<PricingAuditRecord[]>(INITIAL_AUDIT_RECORDS)
+  
+  React.useEffect(() => {
+    fetch('http://localhost:5000/api/pricing/rules')
+      .then(res => res.json())
+      .then(data => setRulesList(data))
+      .catch(err => console.error('Failed to load rules:', err))
+      
+    fetch('http://localhost:5000/api/pricing/audits')
+      .then(res => res.json())
+      .then(data => setAuditRecords(data))
+      .catch(err => console.error('Failed to load audits:', err))
+  }, [])
   
   // Search & Filter state
   const [search, setSearch] = useState('')
@@ -123,19 +122,19 @@ export const PricingSync: React.FC = () => {
       alert('Please enter Rule Name and Formula.')
       return
     }
-
-    const created: PriceRule = {
-      id: `r_${Date.now()}`,
-      name: ruleFormData.name,
-      formula: ruleFormData.formula,
-      applies: ruleFormData.applies,
-      products: 0,
-      active: true,
-    }
-
-    setRulesList(prev => [created, ...prev])
-    setAddRuleOpen(false)
-    showNotification(`Price Rule "${created.name}" created successfully!`)
+    
+    fetch('http://localhost:5000/api/pricing/rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ruleFormData)
+    })
+    .then(res => res.json())
+    .then(created => {
+      setRulesList(prev => [created, ...prev])
+      setAddRuleOpen(false)
+      showNotification(`Price Rule "${created.name}" created successfully!`)
+    })
+    .catch(err => alert('Failed to create rule'))
   }
 
   const handleOpenEditRule = (rule: PriceRule) => {
@@ -151,23 +150,19 @@ export const PricingSync: React.FC = () => {
   const handleSaveEditRule = () => {
     if (!editingRule || !ruleFormData.name.trim() || !ruleFormData.formula.trim()) return
 
-    setRulesList(prev =>
-      prev.map(r => {
-        if (r.id === editingRule.id) {
-          return {
-            ...r,
-            name: ruleFormData.name,
-            formula: ruleFormData.formula,
-            applies: ruleFormData.applies,
-          }
-        }
-        return r
-      })
-    )
-
-    setEditRuleOpen(false)
-    setEditingRule(null)
-    showNotification(`Price Rule "${ruleFormData.name}" updated successfully!`)
+    fetch(`http://localhost:5000/api/pricing/rules/${editingRule.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ruleFormData)
+    })
+    .then(res => res.json())
+    .then(updated => {
+      setRulesList(prev => prev.map(r => r.id === editingRule.id ? updated : r))
+      setEditRuleOpen(false)
+      setEditingRule(null)
+      showNotification(`Price Rule "${updated.name}" updated successfully!`)
+    })
+    .catch(err => alert('Failed to update rule'))
   }
 
   const handleToggleRuleActive = (id: string) => {
@@ -179,10 +174,16 @@ export const PricingSync: React.FC = () => {
   const handleConfirmDeleteRule = () => {
     if (!deletingRule) return
 
-    setRulesList(prev => prev.filter(r => r.id !== deletingRule.id))
-    showNotification(`Price Rule "${deletingRule.name}" deleted.`)
-    setDeleteDialogOpen(false)
-    setDeletingRule(null)
+    fetch(`http://localhost:5000/api/pricing/rules/${deletingRule.id}`, {
+      method: 'DELETE'
+    })
+    .then(() => {
+      setRulesList(prev => prev.filter(r => r.id !== deletingRule.id))
+      showNotification(`Price Rule "${deletingRule.name}" deleted.`)
+      setDeleteDialogOpen(false)
+      setDeletingRule(null)
+    })
+    .catch(err => alert('Failed to delete rule'))
   }
 
   // Filtering Audit Records

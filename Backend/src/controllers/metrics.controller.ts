@@ -56,8 +56,8 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
         missingCategories,
         missingPricing: 0, // Implement pricing check later
         duplicateProducts,
-        productsImportedToday: 1420, // Example from seed/mock
-        productsReadyToPublish: 982,
+        productsImportedToday: 0,
+        productsReadyToPublish: 0,
         runningJobs,
         waitingJobs,
         completedJobs: 0,

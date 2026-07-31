@@ -116,7 +116,21 @@ export const Dashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState('Updated just now')
 
-  const [m, setM] = useState(mockDashboardMetrics)
+  const [m, setM] = useState(() => {
+    if (role === 'platform_owner') {
+      return {
+        connectedSuppliers: 0, disconnectedSuppliers: 0, totalSuppliers: 0,
+        totalProducts: 0, pendingProducts: 0, failedProducts: 0, publishedProducts: 0,
+        productsImportedToday: 0, productsReadyToPublish: 0, duplicateProducts: 0,
+        missingImages: 0, missingCategories: 0, missingPricing: 0, productsAwaitingReview: 0,
+        inventorySyncStatus: 'healthy', pricingSyncStatus: 'healthy', imageSyncStatus: 'healthy',
+        runningJobs: 0, completedJobs: 0, failedJobs: 0, queuedJobs: 0,
+        apiStatus: 'operational', ftpStatus: 'operational', systemHealth: 100,
+        queueSize: 0, storesSynced: 0, totalStores: 0
+      };
+    }
+    return mockDashboardMetrics;
+  })
 
   useEffect(() => {
     if (role === 'platform_owner') {
@@ -126,12 +140,21 @@ export const Dashboard: React.FC = () => {
         .then(data => {
           setM(prev => ({
             ...prev,
-            totalProducts: data.totalProducts || prev.totalProducts,
-            totalSuppliers: data.totalSuppliers || prev.totalSuppliers,
+            totalProducts: data.totalProducts ?? prev.totalProducts,
+            totalSuppliers: data.totalSuppliers ?? prev.totalSuppliers,
             connectedSuppliers: data.connectedSuppliers ?? prev.connectedSuppliers,
-            publishedProducts: data.publishedProducts || prev.publishedProducts,
+            disconnectedSuppliers: data.disconnectedSuppliers ?? prev.disconnectedSuppliers,
+            publishedProducts: data.publishedProducts ?? prev.publishedProducts,
             missingImages: data.missingImages ?? prev.missingImages,
-            // the backend should be enhanced to return all necessary stats
+            missingCategories: data.missingCategories ?? prev.missingCategories,
+            missingPricing: data.missingPricing ?? prev.missingPricing,
+            duplicateProducts: data.duplicateProducts ?? prev.duplicateProducts,
+            productsImportedToday: data.productsImportedToday ?? prev.productsImportedToday,
+            productsReadyToPublish: data.productsReadyToPublish ?? prev.productsReadyToPublish,
+            runningJobs: data.runningJobs ?? prev.runningJobs,
+            completedJobs: data.completedJobs ?? prev.completedJobs,
+            failedJobs: data.failedJobs ?? prev.failedJobs,
+            totalStores: data.totalStores ?? prev.totalStores,
           }))
           setLastUpdated('Updated just now (Live)')
         })
