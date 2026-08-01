@@ -1,14 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Edit2, Trash2, Award, CheckCircle2 } from 'lucide-react'
 import { SectionHeader, FilterBar, EmptyState, ConfirmDialog } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
-import { mockBrands } from '../../data/mockData'
 import type { Brand } from '../../types'
 
 export const Brands: React.FC = () => {
-  const [brandsList, setBrandsList] = useState<Brand[]>(mockBrands)
+  const [brandsList, setBrandsList] = useState<Brand[]>([])
   const [search, setSearch] = useState('')
 
   // Modals state
@@ -36,6 +35,22 @@ export const Brands: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
+  const fetchBrands = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/brands');
+      if (res.ok) {
+        const data = await res.json();
+        setBrandsList(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch brands:', err);
+    }
+  }
+
+  useEffect(() => {
+    fetchBrands();
+  }, [])
+
   // --- Handlers ---
   const handleOpenAdd = () => {
     setFormData({
@@ -48,31 +63,26 @@ export const Brands: React.FC = () => {
     setAddOpen(true)
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name.trim()) {
       alert('Please enter a Brand Name.')
       return
     }
 
-    const generatedSlug =
-      formData.slug.trim() ||
-      formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-
-    const newBrand: Brand = {
-      id: `brand_${Date.now()}`,
-      name: formData.name,
-      slug: generatedSlug,
-      logo: formData.logo,
-      description: formData.description,
-      productCount: 0,
-      status: formData.status,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    try {
+      const res = await fetch('http://localhost:5000/api/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        await fetchBrands();
+        setAddOpen(false)
+        showNotification(`Brand "${formData.name}" created successfully!`)
+      }
+    } catch (err) {
+      console.error(err);
     }
-
-    setBrandsList([newBrand, ...brandsList])
-    setAddOpen(false)
-    showNotification(`Brand "${newBrand.name}" created successfully!`)
   }
 
   const handleOpenEdit = (brand: Brand) => {
@@ -87,38 +97,42 @@ export const Brands: React.FC = () => {
     setEditOpen(true)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingBrand || !formData.name.trim()) return
 
-    setBrandsList(prev =>
-      prev.map(b => {
-        if (b.id === editingBrand.id) {
-          return {
-            ...b,
-            name: formData.name,
-            slug: formData.slug.trim() || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            logo: formData.logo,
-            description: formData.description,
-            status: formData.status,
-            updatedAt: new Date().toISOString(),
-          }
-        }
-        return b
-      })
-    )
-
-    setEditOpen(false)
-    setEditingBrand(null)
-    showNotification(`Brand "${formData.name}" updated successfully!`)
+    try {
+      const res = await fetch(`http://localhost:5000/api/brands/${editingBrand.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        await fetchBrands();
+        setEditOpen(false)
+        setEditingBrand(null)
+        showNotification(`Brand "${formData.name}" updated successfully!`)
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingBrand) return
 
-    setBrandsList(prev => prev.filter(b => b.id !== deletingBrand.id))
-    showNotification(`Brand "${deletingBrand.name}" deleted.`)
-    setDeleteOpen(false)
-    setDeletingBrand(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/brands/${deletingBrand.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchBrands();
+        showNotification(`Brand "${deletingBrand.name}" deleted.`)
+        setDeleteOpen(false)
+        setDeletingBrand(null)
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   const filtered = brandsList.filter(

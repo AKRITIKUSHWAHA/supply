@@ -34,16 +34,23 @@ export const getProducts = async (req: Request, res: Response) => {
         costPrice: p.prices?.[0]?.cost || 0,
         retailPrice: p.prices?.[0]?.price || 0,
         currency: p.prices?.[0]?.currency || 'USD',
+        margin: p.prices?.[0]?.price && p.prices?.[0]?.cost ? ((p.prices[0].price - p.prices[0].cost) / p.prices[0].price) * 100 : 0,
+        lastUpdated: p.updatedAt
       },
       inventory: {
         totalStock: p.inventory?.[0]?.quantity || 0,
         availableStock: p.inventory?.[0]?.quantity || 0,
+        supplierStock: p.inventory?.[0]?.quantity || 0,
+        warehouseStock: 0,
+        reservedStock: 0,
+        lowStockThreshold: 5,
+        lastSynced: p.updatedAt,
         status: (p.inventory?.[0]?.quantity || 0) > 0 ? 'in_stock' : 'out_of_stock'
       },
       images: p.images?.map(img => ({
         id: img.id,
         url: img.url,
-        isPrimary: img.isFeatured,
+        isPrimary: img.isFeatured || false,
         syncStatus: 'synced'
       })) || [],
       variants: [],

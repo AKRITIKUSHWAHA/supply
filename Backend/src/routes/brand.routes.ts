@@ -1,10 +1,11 @@
+import { Router } from 'express';
+import { getBrands, createBrand, updateBrand, deleteBrand } from '../controllers/brand.controller';
 
-import express from 'express';
-import { getBrands, createBrand } from '../controllers/brand.controller';
-
-const router = express.Router();
+const router = Router();
 
 router.get('/', getBrands);
 router.post('/', createBrand);
+router.put('/:id', updateBrand);
+router.delete('/:id', deleteBrand);
 
 export default router;

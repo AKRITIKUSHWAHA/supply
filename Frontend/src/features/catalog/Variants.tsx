@@ -1,13 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Edit2, Trash2, Layers, CheckCircle2, X, Sliders, Tag, Sparkles } from 'lucide-react'
 import { SectionHeader, FilterBar, EmptyState, ConfirmDialog } from '../../components/ui'
 import { Modal } from '../../components/ui/Modal'
-import { mockVariantTypes } from '../../data/mockData'
 import type { VariantType } from '../../types'
 
 export const Variants: React.FC = () => {
-  const [variantsList, setVariantsList] = useState<VariantType[]>(mockVariantTypes)
+  const [variantsList, setVariantsList] = useState<VariantType[]>([])
   const [search, setSearch] = useState('')
 
   // Modals state
@@ -36,6 +35,22 @@ export const Variants: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
+  const fetchVariants = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/variants');
+      if (res.ok) {
+        const data = await res.json();
+        setVariantsList(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch variants:', err);
+    }
+  }
+
+  useEffect(() => {
+    fetchVariants();
+  }, [])
+
   // Calculate summary metrics
   const totalDimensions = variantsList.length
   const totalOptionValues = variantsList.reduce((acc, curr) => acc + curr.values.length, 0)
@@ -47,27 +62,27 @@ export const Variants: React.FC = () => {
     setAddOpen(true)
   }
 
-  const handleCreate = () => {
-    if (!formData.name.trim()) {
-      alert('Please enter Variant Type Name.')
+  const handleCreate = async () => {
+    if (!formData.name.trim() || !formData.valuesString.trim()) {
+      alert('Please enter both name and at least one value.')
       return
     }
 
-    const valArray = formData.valuesString
-      .split(',')
-      .map(v => v.trim())
-      .filter(Boolean)
-
-    const newVariant: VariantType = {
-      id: `var_${Date.now()}`,
-      name: formData.name,
-      values: valArray.length > 0 ? valArray : ['Default'],
-      productCount: 0,
+    const values = formData.valuesString.split(',').map(v => v.trim()).filter(Boolean)
+    try {
+      const res = await fetch('http://localhost:5000/api/variants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: formData.name, values })
+      });
+      if (res.ok) {
+        await fetchVariants();
+        setAddOpen(false)
+        showNotification(`Variant Type "${formData.name}" created successfully!`)
+      }
+    } catch (err) {
+      console.error(err);
     }
-
-    setVariantsList([newVariant, ...variantsList])
-    setAddOpen(false)
-    showNotification(`Variant Type "${newVariant.name}" created!`)
   }
 
   const handleOpenEdit = (v: VariantType) => {
