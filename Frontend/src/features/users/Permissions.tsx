@@ -83,12 +83,25 @@ export const Permissions: React.FC = () => {
     showNotification(`Granted all module permissions to ${targetRole.replace(/_/g, ' ')}`)
   }
 
-  const handleSaveAll = () => {
+  const handleSaveAll = async () => {
     setIsSaving(true)
-    setTimeout(() => {
+    try {
+      const promises = Object.entries(permissionsConfig).map(([roleId, perms]) => {
+        if (roleId === 'platform_owner') return Promise.resolve();
+        return fetch(`http://localhost:5000/api/roles/${roleId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ permissions: perms })
+        });
+      });
+      await Promise.all(promises);
+      showNotification('Permission configuration saved to database and applied in real-time!')
+    } catch (error) {
+      console.error('Failed to save permissions', error);
+      showNotification('Failed to save permissions to database.');
+    } finally {
       setIsSaving(false)
-      showNotification('Permission configuration saved and applied to system in real-time!')
-    }, 400)
+    }
   }
 
   const filteredModules = MODULE_LIST.filter(m => {

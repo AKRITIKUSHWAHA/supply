@@ -42,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
       { id: 'supplier-onboarding', label: 'Supplier Onboarding', icon: <Plus size={16} />,  path: '/suppliers/onboarding', module: 'suppliers' },
     ],
   },
+  { id: 'integrations', label: 'Integrations', icon: <Plug size={18} />, path: '/integrations', module: 'integrations' },
   { id: 'stores', label: 'Stores', icon: <Store size={18} />, path: '/stores', module: 'store_management' },
   {
     id: 'mapping', label: 'Data Mapping', icon: <ArrowLeftRight size={18} />, module: 'mapping',
