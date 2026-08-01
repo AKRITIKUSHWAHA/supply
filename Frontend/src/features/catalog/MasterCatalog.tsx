@@ -855,7 +855,7 @@ export const MasterCatalog: React.FC = () => {
                   src={newProduct.imageUrl}
                   alt="Preview"
                   className="w-12 h-12 rounded-lg object-cover border border-slate-200 flex-shrink-0 mt-0.5"
-                  onError={e => { e.target.style.display = 'none' }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                 />
               )}
             </div>
