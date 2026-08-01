@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState } from 'react'
-import { mockProducts } from '../data/mockData'
 import type { Product } from '../types'
 
 interface ProductContextType {
@@ -10,15 +9,13 @@ interface ProductContextType {
 const ProductContext = createContext<ProductContextType | null>(null)
 
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [productsList, setProductsList] = useState<Product[]>(mockProducts)
+  const [productsList, setProductsList] = useState<Product[]>([])
 
   React.useEffect(() => {
     fetch('http://localhost:5000/api/products')
       .then(res => res.json())
       .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
-          // Map DB models to Frontend types if needed, or just set it
-          // In a real app we'd map fields if they diverge, but for now we'll just set it
+        if (data && Array.isArray(data)) {
           setProductsList(data as unknown as Product[])
         }
       })

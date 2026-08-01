@@ -43,7 +43,7 @@ export const getProducts = async (req: Request, res: Response) => {
       images: p.images?.map(img => ({
         id: img.id,
         url: img.url,
-        isPrimary: img.isPrimary,
+        isPrimary: img.isFeatured,
         syncStatus: 'synced'
       })) || [],
       variants: [],

@@ -116,52 +116,45 @@ export const Dashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState('Updated just now')
 
-  const [m, setM] = useState(() => {
-    if (role === 'platform_owner') {
-      return {
-        connectedSuppliers: 0, disconnectedSuppliers: 0, totalSuppliers: 0,
-        totalProducts: 0, pendingProducts: 0, failedProducts: 0, publishedProducts: 0,
-        productsImportedToday: 0, productsReadyToPublish: 0, duplicateProducts: 0,
-        missingImages: 0, missingCategories: 0, missingPricing: 0, productsAwaitingReview: 0,
-        inventorySyncStatus: 'healthy', pricingSyncStatus: 'healthy', imageSyncStatus: 'healthy',
-        runningJobs: 0, completedJobs: 0, failedJobs: 0, queuedJobs: 0,
-        apiStatus: 'operational', ftpStatus: 'operational', systemHealth: 100,
-        queueSize: 0, storesSynced: 0, totalStores: 0
-      };
-    }
-    return mockDashboardMetrics;
+  const [m, setM] = useState({
+    connectedSuppliers: 0, disconnectedSuppliers: 0, totalSuppliers: 0,
+    totalProducts: 0, pendingProducts: 0, failedProducts: 0, publishedProducts: 0,
+    productsImportedToday: 0, productsReadyToPublish: 0, duplicateProducts: 0,
+    missingImages: 0, missingCategories: 0, missingPricing: 0, productsAwaitingReview: 0,
+    inventorySyncStatus: 'healthy', pricingSyncStatus: 'healthy', imageSyncStatus: 'healthy',
+    runningJobs: 0, completedJobs: 0, failedJobs: 0, queuedJobs: 0,
+    apiStatus: 'operational', ftpStatus: 'operational', systemHealth: 100,
+    queueSize: 0, storesSynced: 0, totalStores: 0
   })
 
   useEffect(() => {
-    if (role === 'platform_owner') {
-      setIsRefreshing(true)
-      fetch('http://localhost:5000/api/dashboard/stats')
-        .then(res => res.json())
-        .then(data => {
-          setM(prev => ({
-            ...prev,
-            totalProducts: data.totalProducts ?? prev.totalProducts,
-            totalSuppliers: data.totalSuppliers ?? prev.totalSuppliers,
-            connectedSuppliers: data.connectedSuppliers ?? prev.connectedSuppliers,
-            disconnectedSuppliers: data.disconnectedSuppliers ?? prev.disconnectedSuppliers,
-            publishedProducts: data.publishedProducts ?? prev.publishedProducts,
-            missingImages: data.missingImages ?? prev.missingImages,
-            missingCategories: data.missingCategories ?? prev.missingCategories,
-            missingPricing: data.missingPricing ?? prev.missingPricing,
-            duplicateProducts: data.duplicateProducts ?? prev.duplicateProducts,
-            productsImportedToday: data.productsImportedToday ?? prev.productsImportedToday,
-            productsReadyToPublish: data.productsReadyToPublish ?? prev.productsReadyToPublish,
-            runningJobs: data.runningJobs ?? prev.runningJobs,
-            completedJobs: data.completedJobs ?? prev.completedJobs,
-            failedJobs: data.failedJobs ?? prev.failedJobs,
-            totalStores: data.totalStores ?? prev.totalStores,
-          }))
-          setLastUpdated('Updated just now (Live)')
-        })
-        .catch(err => console.error('Failed to load live metrics:', err))
-        .finally(() => setIsRefreshing(false))
-    }
-  }, [role])
+    setIsRefreshing(true)
+    fetch('http://localhost:5000/api/dashboard/stats')
+      .then(res => res.json())
+      .then(data => {
+        setM(prev => ({
+          ...prev,
+          totalProducts: data.totalProducts ?? 0,
+          totalSuppliers: data.totalSuppliers ?? 0,
+          connectedSuppliers: data.connectedSuppliers ?? 0,
+          disconnectedSuppliers: data.disconnectedSuppliers ?? 0,
+          publishedProducts: data.publishedProducts ?? 0,
+          missingImages: data.missingImages ?? 0,
+          missingCategories: data.missingCategories ?? 0,
+          missingPricing: data.missingPricing ?? 0,
+          duplicateProducts: data.duplicateProducts ?? 0,
+          productsImportedToday: data.productsImportedToday ?? 0,
+          productsReadyToPublish: data.productsReadyToPublish ?? 0,
+          runningJobs: data.runningJobs ?? 0,
+          completedJobs: data.completedJobs ?? 0,
+          failedJobs: data.failedJobs ?? 0,
+          totalStores: data.totalStores ?? 0,
+        }))
+        setLastUpdated('Updated just now (Live)')
+      })
+      .catch(err => console.error('Failed to load live metrics:', err))
+      .finally(() => setIsRefreshing(false))
+  }, [])
 
   // Per-User Custom Cards & Widget Layout State
   const [customCards, setCustomCards] = useState<Record<string, any>>(() => {

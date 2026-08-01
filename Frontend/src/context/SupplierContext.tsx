@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState } from 'react'
-import { mockSuppliers } from '../data/mockData'
 import type { Supplier } from '../types'
 
 interface SupplierContextType {
@@ -10,13 +9,13 @@ interface SupplierContextType {
 const SupplierContext = createContext<SupplierContextType | null>(null)
 
 export const SupplierProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [suppliersList, setSuppliersList] = useState<Supplier[]>(mockSuppliers)
+  const [suppliersList, setSuppliersList] = useState<Supplier[]>([])
 
   React.useEffect(() => {
     fetch('http://localhost:5000/api/suppliers')
       .then(res => res.json())
       .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
+        if (data && Array.isArray(data)) {
           setSuppliersList(data as unknown as Supplier[])
         }
       })
