@@ -19,12 +19,28 @@ const jobTypeColor: Record<string, string> = {
 
 export const SyncJobs: React.FC = () => {
   const { role } = useAuth()
-  const [jobsList, setJobsList] = useState<SyncJob[]>(mockSyncJobs)
+  const [jobsList, setJobsList] = useState<SyncJob[]>([])
   const [tab, setTab] = useState('all')
   const [search, setSearch] = useState('')
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([])
   const [detailJob, setDetailJob] = useState<SyncJob | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const fetchJobs = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/sync/jobs')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setJobsList(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch sync jobs:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchJobs()
+  }, [])
 
   const showNotification = (msg: string) => {
     setToastMessage(msg)
@@ -34,40 +50,19 @@ export const SyncJobs: React.FC = () => {
   // --- Handlers for Synchronization Controls ---
   
   // 1. Manual Trigger Sync (Creates running job, updates counters immediately)
-  const handleTriggerSync = () => {
-    const newJob: SyncJob = {
-      id: `job_${Date.now().toString().slice(-4)}`,
-      type: 'full',
-      name: 'Full Catalog Resync',
-      status: 'running',
-      progress: 20,
-      processedItems: 3600,
-      totalItems: 18450,
-      failedItems: 0,
-      startedAt: new Date().toISOString(),
-      triggeredBy: 'Manual Trigger',
-      canRetry: false,
-      logs: [
-        'Manual sync job triggered',
-        'Initializing background data pipeline...',
-        'Processing product catalog synchronization...',
-      ],
+  const handleTriggerSync = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/sync/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Full Catalog Resync', type: 'full' })
+      })
+      const created = await res.json()
+      setJobsList(prev => [created, ...prev])
+      showNotification('New Sync Job created and completed!')
+    } catch (err) {
+      console.error('Failed to trigger sync job:', err)
     }
-
-    setJobsList(prev => [newJob, ...prev])
-    showNotification('New Sync Job created and running!')
-
-    // Auto-advance progress to completion
-    setTimeout(() => {
-      setJobsList(prev =>
-        prev.map(j =>
-          j.id === newJob.id
-            ? { ...j, progress: 100, processedItems: 18450, status: 'completed' }
-            : j
-        )
-      )
-      showNotification('Sync Job completed successfully!')
-    }, 3000)
   }
 
   // 2. Retry Failed Jobs (Toolbar action & single row action)

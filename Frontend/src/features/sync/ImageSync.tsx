@@ -37,134 +37,29 @@ export interface ImageAssetItem {
   history?: { timestamp: string; action: string; note: string }[]
 }
 
-const INITIAL_IMAGE_ITEMS: ImageAssetItem[] = [
-  {
-    id: 'img-101',
-    product: 'AMD Ryzen 9 7950X Processor 16-Core',
-    sku: 'CPU-AMD-7950X',
-    supplier: 'TechParts International',
-    imageType: 'Hero',
-    rawUrl: 'https://techparts-cdn.com/raw/cpu-7950x-front.jpg',
-    cdnUrl: 'https://cdn.supplybridge.io/media/cpu-7950x-thumb.webp',
-    resolution: '1920x1080',
-    fileSize: '148 KB',
-    compressionRatio: '-68% WebP',
-    status: 'Published',
-    lastSync: '4 min ago',
-    history: [
-      { timestamp: '2026-07-27 16:15', action: 'CDN Upload', note: 'Pushed to CDN distribution network' },
-      { timestamp: '2026-07-27 16:14', action: 'WebP Conversion', note: 'Compressed from 460KB JPEG to 148KB WebP' },
-      { timestamp: '2026-07-27 16:10', action: 'Supplier Feed Import', note: 'Received from TechParts REST API' },
-    ],
-  },
-  {
-    id: 'img-102',
-    product: 'NVIDIA GeForce RTX 4090 24GB OC',
-    sku: 'GPU-NV-4090',
-    supplier: 'TechParts International',
-    imageType: 'Hero',
-    rawUrl: 'https://techparts-cdn.com/raw/rtx-4090-box.jpg',
-    cdnUrl: 'https://cdn.supplybridge.io/media/rtx-4090-thumb.webp',
-    resolution: '3840x2160',
-    fileSize: '320 KB',
-    compressionRatio: '-72% WebP',
-    status: 'Optimized',
-    lastSync: '12 min ago',
-    history: [
-      { timestamp: '2026-07-27 16:00', action: 'Image Optimization', note: 'WebP conversion completed' },
-    ],
-  },
-  {
-    id: 'img-103',
-    product: 'DDR5 32GB 6000MHz RGB Memory Kit',
-    sku: 'RAM-DDR5-001',
-    supplier: 'TechParts International',
-    imageType: 'Gallery',
-    rawUrl: 'https://techparts-cdn.com/raw/ddr5-ram-kit.jpg',
-    cdnUrl: 'https://cdn.supplybridge.io/media/ddr5-ram-thumb.webp',
-    resolution: '1200x1200',
-    fileSize: '92 KB',
-    compressionRatio: '-55% WebP',
-    status: 'CDN Cached',
-    lastSync: '18 min ago',
-  },
-  {
-    id: 'img-104',
-    product: 'Samsung 990 Pro 2TB NVMe PCIe 4.0 SSD',
-    sku: 'SSD-990P-2TB',
-    supplier: 'GlobalSource Limited',
-    imageType: 'Technical Diagram',
-    rawUrl: 'https://globalsource-feeds.org/assets/ssd990.png',
-    cdnUrl: 'https://cdn.supplybridge.io/media/ssd-990p-thumb.webp',
-    resolution: '1600x1200',
-    fileSize: '115 KB',
-    compressionRatio: '-60% WebP',
-    status: 'Published',
-    lastSync: '28 min ago',
-  },
-  {
-    id: 'img-105',
-    product: 'Corsair RM1000x 1000W Modular PSU',
-    sku: 'PSU-COR-1000W',
-    supplier: 'GlobalSource Limited',
-    imageType: 'Hero',
-    rawUrl: '',
-    cdnUrl: '',
-    resolution: '—',
-    fileSize: '0 KB',
-    compressionRatio: '0%',
-    status: 'Missing',
-    lastSync: '1 hr ago',
-  },
-  {
-    id: 'img-106',
-    product: 'Logitech MX Master 3S Wireless Mouse',
-    sku: 'MOUSE-MX3S',
-    supplier: 'Acme Distributors',
-    imageType: 'Thumbnail',
-    rawUrl: 'https://acme-dist.com/media/mx3s-broken.png',
-    cdnUrl: '',
-    resolution: 'Unknown',
-    fileSize: '0 KB',
-    compressionRatio: '0%',
-    status: '404',
-    lastSync: '3 hr ago',
-  },
-  {
-    id: 'img-107',
-    product: 'Keychron Q1 Pro Mechanical Keyboard',
-    sku: 'KEY-Q1PRO',
-    supplier: 'QuickShip LLC',
-    imageType: 'Hero',
-    rawUrl: 'https://quickship.com/feeds/keychron-q1.jpg',
-    cdnUrl: 'https://cdn.supplybridge.io/media/keychron-q1-thumb.webp',
-    resolution: '2048x1536',
-    fileSize: '165 KB',
-    compressionRatio: '-64% WebP',
-    status: 'Validated',
-    lastSync: '5 min ago',
-  },
-  {
-    id: 'img-108',
-    product: 'ASUS ROG Swift 27" 1440P Monitor',
-    sku: 'MON-ASUS-27',
-    supplier: 'PrimeSupply Corp',
-    imageType: 'Hero',
-    rawUrl: 'https://primesupply.net/img/asus-27.jpg',
-    cdnUrl: 'https://cdn.supplybridge.io/media/asus-27-thumb.webp',
-    resolution: '2560x1440',
-    fileSize: '210 KB',
-    compressionRatio: '-58% WebP',
-    status: 'Compression Failed',
-    lastSync: '2 hr ago',
-  },
-]
+const INITIAL_IMAGE_ITEMS: ImageAssetItem[] = []
 
 export const ImageSync: React.FC = () => {
   const [items, setItems] = useState<ImageAssetItem[]>(INITIAL_IMAGE_ITEMS)
   const [syncingAll, setSyncingAll] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const fetchImages = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/sync/images')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch image sync items:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchImages()
+  }, [])
 
   // Searches & Filters
   const [search, setSearch] = useState('')

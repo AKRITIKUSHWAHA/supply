@@ -1,30 +1,35 @@
-import React, { createContext, useContext, useState } from 'react'
-import { mockSuppliers } from '../data/mockData'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import type { Supplier } from '../types'
 
 interface SupplierContextType {
   suppliersList: Supplier[]
   setSuppliersList: React.Dispatch<React.SetStateAction<Supplier[]>>
+  refreshSuppliers: () => Promise<void>
 }
 
 const SupplierContext = createContext<SupplierContextType | null>(null)
 
 export const SupplierProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [suppliersList, setSuppliersList] = useState<Supplier[]>(mockSuppliers)
+  const [suppliersList, setSuppliersList] = useState<Supplier[]>([])
 
-  React.useEffect(() => {
-    fetch('http://localhost:5000/api/suppliers')
-      .then(res => res.json())
-      .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
-          setSuppliersList(data as unknown as Supplier[])
-        }
-      })
-      .catch(err => console.error('Failed to fetch real suppliers:', err))
+  const refreshSuppliers = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/suppliers')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setSuppliersList(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch real suppliers:', err)
+    }
+  }
+
+  useEffect(() => {
+    refreshSuppliers()
   }, [])
 
   return (
-    <SupplierContext.Provider value={{ suppliersList, setSuppliersList }}>
+    <SupplierContext.Provider value={{ suppliersList, setSuppliersList, refreshSuppliers }}>
       {children}
     </SupplierContext.Provider>
   )

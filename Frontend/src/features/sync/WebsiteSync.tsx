@@ -25,78 +25,7 @@ export interface StorefrontSyncItem {
   syncInterval?: string
 }
 
-const INITIAL_STORES: StorefrontSyncItem[] = [
-  {
-    id: 'store1',
-    name: 'SupplyBridge US Store',
-    platform: 'Shift4Shop',
-    url: 'https://store.supplybridge-us.com',
-    connectionStatus: 'connected',
-    lastSuccessSync: '10 min ago',
-    lastFailedSync: null,
-    productsPublished: 40000,
-    totalProducts: 40000,
-    syncStatus: 'synced',
-    apiKey: 's4s_live_pk_9948271',
-    syncInterval: '15 mins',
-  },
-  {
-    id: 'store2',
-    name: 'Global Electronics Hub',
-    platform: 'Shopify',
-    url: 'https://electronics-hub.myshopify.com',
-    connectionStatus: 'connected',
-    lastSuccessSync: '25 min ago',
-    lastFailedSync: null,
-    productsPublished: 18450,
-    totalProducts: 18450,
-    syncStatus: 'synced',
-    apiKey: 'shpat_8829103847',
-    syncInterval: '30 mins',
-  },
-  {
-    id: 'store3',
-    name: 'EU Direct Commerce',
-    platform: 'WooCommerce',
-    url: 'https://eu.directcommerce.io',
-    connectionStatus: 'connected',
-    lastSuccessSync: '1 hr ago',
-    lastFailedSync: '2 hr ago',
-    productsPublished: 12100,
-    totalProducts: 12500,
-    syncStatus: 'failed',
-    apiKey: 'ck_773910382910',
-    syncInterval: '1 hour',
-  },
-  {
-    id: 'store4',
-    name: 'Industrial Wholesale Portal',
-    platform: 'Magento',
-    url: 'https://b2b.industrialportal.com',
-    connectionStatus: 'connected',
-    lastSuccessSync: '3 hr ago',
-    lastFailedSync: null,
-    productsPublished: 8900,
-    totalProducts: 8900,
-    syncStatus: 'synced',
-    apiKey: 'mag_bearer_8829103',
-    syncInterval: '6 hours',
-  },
-  {
-    id: 'store5',
-    name: 'QuickShip Outlet Store',
-    platform: 'BigCommerce',
-    url: 'https://store-quickship.mybigcommerce.com',
-    connectionStatus: 'connecting',
-    lastSuccessSync: '5 hr ago',
-    lastFailedSync: null,
-    productsPublished: 6200,
-    totalProducts: 6400,
-    syncStatus: 'pending',
-    apiKey: 'bc_token_4492019',
-    syncInterval: '1 hour',
-  },
-]
+const INITIAL_STORES: StorefrontSyncItem[] = []
 
 export const WebsiteSync: React.FC = () => {
   const [storesList, setStoresList] = useState<StorefrontSyncItem[]>(INITIAL_STORES)
@@ -108,6 +37,36 @@ export const WebsiteSync: React.FC = () => {
   const [syncingAll, setSyncingAll] = useState(false)
   const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const fetchStores = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/stores')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        const mapped = data.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          platform: s.platform || 'Shift4Shop',
+          url: s.url,
+          connectionStatus: s.status === 'active' ? 'connected' : 'disconnected',
+          lastSuccessSync: s.lastSync || 'Never',
+          lastFailedSync: null,
+          productsPublished: s.productCount || 0,
+          totalProducts: s.productCount || 0,
+          syncStatus: s.syncStatus || 'synced',
+          apiKey: '••••••••',
+          syncInterval: 'Hourly',
+        }))
+        setStoresList(mapped)
+      }
+    } catch (err) {
+      console.error('Failed to fetch stores for website sync:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchStores()
+  }, [])
 
   // Modal States for View & Settings
   const [viewStore, setViewStore] = useState<StorefrontSyncItem | null>(null)

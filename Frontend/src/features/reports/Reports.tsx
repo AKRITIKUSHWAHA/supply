@@ -7,44 +7,46 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const COLORS = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e', '#7c3aed']
 
-const supplierData = [
-  { name: 'TechParts Int.', type: 'REST API', products: 18420, synced: 18420, errors: 0, passRate: 100, uptime: '99.9%' },
-  { name: 'GlobalSource',    type: 'SFTP (CSV)', products: 14800, synced: 14600, errors: 200, passRate: 98.6, uptime: '99.5%' },
-  { name: 'PrimeSup Corp',   type: 'FTP (XML)', products: 11200, synced: 11200, errors: 0, passRate: 100, uptime: '99.8%' },
-  { name: 'AcmeDist.',       type: 'Excel Upload', products: 9800,  synced: 9200,  errors: 600, passRate: 93.8, uptime: '94.2%' },
-  { name: 'QuickShip Co.',   type: 'REST API', products: 7300,  synced: 7300,  errors: 0, passRate: 100, uptime: '99.9%' },
-]
-
-const syncTrend = [
-  { month: 'Feb', success: 98.2, failed: 1.8, durationMin: 34 },
-  { month: 'Mar', success: 97.8, failed: 2.2, durationMin: 32 },
-  { month: 'Apr', success: 99.1, failed: 0.9, durationMin: 30 },
-  { month: 'May', success: 98.7, failed: 1.3, durationMin: 29 },
-  { month: 'Jun', success: 99.3, failed: 0.7, durationMin: 28 },
-  { month: 'Jul', success: 98.4, failed: 1.6, durationMin: 27 },
-]
-
-const catalogPie = [
-  { name: 'Electronics', value: 45200 },
-  { name: 'Home & Garden', value: 12300 },
-  { name: 'Sporting Goods', value: 8900 },
-  { name: 'Industrial', value: 6200 },
-  { name: 'Other', value: 11729 },
-]
-
-const validationErrorsPie = [
-  { name: 'Missing Price', value: 42 },
-  { name: 'Duplicate SKU', value: 28 },
-  { name: 'Missing Image', value: 18 },
-  { name: 'Invalid Category', value: 12 },
-]
-
 export const Reports: React.FC = () => {
   const [tab, setTab] = useState('import_summary')
   const [dateRange, setDateRange] = useState('Last 30 days')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
+
+  const [supplierData, setSupplierData] = useState<any[]>([])
+  const [syncTrend, setSyncTrend] = useState<any[]>([])
+  const [catalogPie, setCatalogPie] = useState<any[]>([])
+  const [validationErrorsPie, setValidationErrorsPie] = useState<any[]>([])
+  const [priceChanges, setPriceChanges] = useState<any[]>([])
+  const [inventoryChanges, setInventoryChanges] = useState<any[]>([])
+  const [newProducts, setNewProducts] = useState<any[]>([])
+  const [publishingActivity, setPublishingActivity] = useState<any[]>([])
+  const [summaryStats, setSummaryStats] = useState({ totalSuppliers: 0, totalProducts: 0, totalCategories: 0, totalValidationIssues: 0 })
+
+  const fetchReports = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/reports')
+      const data = await res.json()
+      if (data) {
+        if (data.supplierData) setSupplierData(data.supplierData)
+        if (data.syncTrend) setSyncTrend(data.syncTrend)
+        if (data.catalogPie) setCatalogPie(data.catalogPie)
+        if (data.validationErrorsPie) setValidationErrorsPie(data.validationErrorsPie)
+        if (data.priceChanges) setPriceChanges(data.priceChanges)
+        if (data.inventoryChanges) setInventoryChanges(data.inventoryChanges)
+        if (data.newProducts) setNewProducts(data.newProducts)
+        if (data.publishingActivity) setPublishingActivity(data.publishingActivity)
+        if (data.summaryStats) setSummaryStats(data.summaryStats)
+      }
+    } catch (err) {
+      console.error('Failed to fetch reports:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchReports()
+  }, [])
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -155,10 +157,10 @@ export const Reports: React.FC = () => {
 
           <h2>1. Executive Summary & KPIs</h2>
           <ul>
-            <li><strong>Total Configured Suppliers:</strong> 27 Partners</li>
-            <li><strong>Active API/FTP Connections:</strong> 23 Connections</li>
-            <li><strong>Total Catalog Products:</strong> 84,329 SKUs</li>
-            <li><strong>Overall Sync Health:</strong> 99.8% Operational</li>
+            <li><strong>Total Configured Suppliers:</strong> ${summaryStats.totalSuppliers} Partners</li>
+            <li><strong>Active API/FTP Connections:</strong> ${summaryStats.totalSuppliers} Connections</li>
+            <li><strong>Total Catalog Products:</strong> ${summaryStats.totalProducts.toLocaleString()} SKUs</li>
+            <li><strong>Overall Sync Health:</strong> ${summaryStats.passRate || '100%'} Operational</li>
           </ul>
 
           <h2>2. Supplier Performance & Feed Pass Rates</h2>
@@ -370,10 +372,10 @@ export const Reports: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
             {[
-              { label: 'TOTAL IMPORTED SKUS', value: '84,329 SKUs', color: 'text-slate-900 dark:text-slate-100', bg: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800', sub: 'Across 5 active supplier feeds' },
-              { label: 'FEED VALIDATION PASS RATE', value: '98.4%', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50', sub: 'Passed Validation Rules' },
-              { label: 'FAILED IMPORT RECORDS', value: '843 Records', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50', sub: 'Pending review in Validation' },
-              { label: 'STOREFRONT PUBLISHED RATE', value: '99.2%', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50', sub: 'Published across channels' },
+              { label: 'TOTAL IMPORTED SKUS', value: `${summaryStats.totalProducts.toLocaleString()} SKUs`, color: 'text-slate-900 dark:text-slate-100', bg: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800', sub: `Across ${summaryStats.totalSuppliers} active supplier feeds` },
+              { label: 'FEED VALIDATION PASS RATE', value: summaryStats.passRate || '100%', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50', sub: 'Passed Validation Rules' },
+              { label: 'FAILED IMPORT RECORDS', value: `${summaryStats.totalValidationIssues} Records`, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50', sub: 'Pending review in Validation' },
+              { label: 'STOREFRONT PUBLISHED RATE', value: summaryStats.totalProducts > 0 ? '100%' : '0%', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50', sub: 'Published across channels' },
             ].map((card, i) => (
               <div key={i} className={`p-4 rounded-2xl shadow-xs flex flex-col justify-between transition-all duration-200 ${card.bg}`}>
                 <p className="text-[10px] sm:text-2xs font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">{card.label}</p>
@@ -386,31 +388,39 @@ export const Reports: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="card p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">Feed Import Volume & Master Catalog Category Share</h3>
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie data={catalogPie} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
-                    {catalogPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v) => (v as number).toLocaleString()} contentStyle={{ borderRadius: '12px', fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
+              {catalogPie.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie data={catalogPie} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
+                      {catalogPie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v) => (v as number).toLocaleString()} contentStyle={{ borderRadius: '12px', fontSize: '12px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="py-16 text-center text-slate-400 text-xs font-medium">No catalog categories or product assignments recorded yet</div>
+              )}
             </div>
 
             <div className="card p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between">
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">Category Volume & Quality Index</h3>
               <div className="space-y-3">
-                {catalogPie.map((cat, idx) => (
-                  <div key={cat.name} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/70 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{cat.name}</span>
+                {catalogPie.length > 0 ? (
+                  catalogPie.map((cat, idx) => (
+                    <div key={cat.name} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/70 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{cat.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-slate-500">{cat.value.toLocaleString()} SKUs</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">100% Health</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-slate-500">{cat.value.toLocaleString()} SKUs</span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">99.5% Health</span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="py-12 text-center text-slate-400 text-xs font-medium">No category breakdown data available</div>
+                )}
               </div>
             </div>
           </div>
@@ -437,15 +447,15 @@ export const Reports: React.FC = () => {
             <div className="space-y-4 text-xs">
               <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800">
                 <span className="font-bold text-emerald-800 dark:text-emerald-300">Resolved & Approved Products</span>
-                <span className="font-black text-emerald-700 dark:text-emerald-400 text-sm">1,247 Items</span>
+                <span className="font-black text-emerald-700 dark:text-emerald-400 text-sm">{(summaryStats as any).resolvedValidationCount || 0} Items</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800">
                 <span className="font-bold text-amber-800 dark:text-amber-300">Pending Review Queue</span>
-                <span className="font-black text-amber-700 dark:text-amber-400 text-sm">84 Items</span>
+                <span className="font-black text-amber-700 dark:text-amber-400 text-sm">{(summaryStats as any).pendingValidationCount || 0} Items</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200 dark:border-rose-800">
                 <span className="font-bold text-rose-800 dark:text-rose-300">Rejected & Returned to Supplier</span>
-                <span className="font-black text-rose-700 dark:text-rose-400 text-sm">12 Items</span>
+                <span className="font-black text-rose-700 dark:text-rose-400 text-sm">0 Items</span>
               </div>
             </div>
           </div>
@@ -527,21 +537,25 @@ export const Reports: React.FC = () => {
                   <th>Supplier Source</th>
                   <th>Previous Price</th>
                   <th>Updated Price</th>
-                  <th>Change (%)</th>
+                  <th>Change</th>
                   <th>Timestamp</th>
                 </tr>
               </thead>
               <tbody>
-                {mockPriceChanges.map(p => (
-                  <tr key={p.sku} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                    <td className="font-semibold text-slate-800 dark:text-slate-100">{p.name} <span className="text-2xs font-mono text-slate-400 block">{p.sku}</span></td>
-                    <td className="text-slate-600 dark:text-slate-300 font-medium">{p.supplier}</td>
-                    <td className="text-slate-500 font-mono">{p.oldPrice}</td>
-                    <td className="font-bold text-slate-800 dark:text-slate-100 font-mono">{p.newPrice}</td>
-                    <td><span className={`px-2 py-0.5 rounded text-2xs font-bold ${p.change.startsWith('-') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60' : 'bg-amber-50 text-amber-600 dark:bg-amber-950/60'}`}>{p.change}</span></td>
-                    <td className="text-xs text-slate-400 font-mono">{p.date}</td>
-                  </tr>
-                ))}
+                {priceChanges.length > 0 ? (
+                  priceChanges.map((p, idx) => (
+                    <tr key={p.sku + idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                      <td className="font-semibold text-slate-800 dark:text-slate-100">{p.name} <span className="text-2xs font-mono text-slate-400 block">{p.sku}</span></td>
+                      <td className="text-slate-600 dark:text-slate-300 font-medium">{p.supplier}</td>
+                      <td className="text-slate-500 font-mono">{p.oldPrice}</td>
+                      <td className="font-bold text-slate-800 dark:text-slate-100 font-mono">{p.newPrice}</td>
+                      <td><span className={`px-2 py-0.5 rounded text-2xs font-bold ${p.change.startsWith('-') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60' : 'bg-amber-50 text-amber-600 dark:bg-amber-950/60'}`}>{p.change}</span></td>
+                      <td className="text-xs text-slate-400 font-mono">{p.date}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-400 text-xs font-medium">No price changes recorded in database</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -567,16 +581,20 @@ export const Reports: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockInventoryChanges.map(i => (
-                  <tr key={i.sku} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                    <td className="font-semibold text-slate-800 dark:text-slate-100">{i.name} <span className="text-2xs font-mono text-slate-400 block">{i.sku}</span></td>
-                    <td className="text-slate-600 dark:text-slate-300 font-medium">{i.supplier}</td>
-                    <td className="text-slate-500 font-mono">{i.oldStock}</td>
-                    <td className="font-bold text-slate-800 dark:text-slate-100 font-mono">{i.newStock}</td>
-                    <td><span className={`px-2 py-0.5 rounded text-2xs font-bold ${i.change.includes('-') ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/60' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60'}`}>{i.change}</span></td>
-                    <td className="text-xs text-slate-400 font-mono">{i.date}</td>
-                  </tr>
-                ))}
+                {inventoryChanges.length > 0 ? (
+                  inventoryChanges.map((i, idx) => (
+                    <tr key={i.sku + idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                      <td className="font-semibold text-slate-800 dark:text-slate-100">{i.name} <span className="text-2xs font-mono text-slate-400 block">{i.sku}</span></td>
+                      <td className="text-slate-600 dark:text-slate-300 font-medium">{i.supplier}</td>
+                      <td className="text-slate-500 font-mono">{i.oldStock}</td>
+                      <td className="font-bold text-slate-800 dark:text-slate-100 font-mono">{i.newStock}</td>
+                      <td><span className={`px-2 py-0.5 rounded text-2xs font-bold ${i.change.includes('-') ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/60' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60'}`}>{i.change}</span></td>
+                      <td className="text-xs text-slate-400 font-mono">{i.date}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-400 text-xs font-medium">No inventory stock changes recorded in database</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -601,15 +619,19 @@ export const Reports: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockNewProducts.map(n => (
-                  <tr key={n.sku} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                    <td className="font-semibold text-slate-800 dark:text-slate-100">{n.name} <span className="text-2xs font-mono text-slate-400 block">{n.sku}</span></td>
-                    <td className="text-slate-600 dark:text-slate-300">{n.category}</td>
-                    <td className="text-slate-600 dark:text-slate-300 font-medium">{n.supplier}</td>
-                    <td className="font-bold text-slate-800 dark:text-slate-100 font-mono">{n.price}</td>
-                    <td className="text-xs text-slate-400 font-mono">{n.added}</td>
-                  </tr>
-                ))}
+                {newProducts.length > 0 ? (
+                  newProducts.map((n, idx) => (
+                    <tr key={n.sku + idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                      <td className="font-semibold text-slate-800 dark:text-slate-100">{n.name} <span className="text-2xs font-mono text-slate-400 block">{n.sku}</span></td>
+                      <td className="text-slate-600 dark:text-slate-300">{n.category}</td>
+                      <td className="text-slate-600 dark:text-slate-300 font-medium">{n.supplier}</td>
+                      <td className="font-bold text-slate-800 dark:text-slate-100 font-mono">{n.price}</td>
+                      <td className="text-xs text-slate-400 font-mono">{n.added}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-medium">No new products onboarded in database</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -633,14 +655,18 @@ export const Reports: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {mockPublishingActivity.map(pub => (
-                  <tr key={pub.sku} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                    <td className="font-semibold text-slate-800 dark:text-slate-100">{pub.name} <span className="text-2xs font-mono text-slate-400 block">{pub.sku}</span></td>
-                    <td className="text-slate-600 dark:text-slate-300 font-medium">{pub.store}</td>
-                    <td><Badge variant={pub.status === 'Published' ? 'success' : 'info'}>{pub.status}</Badge></td>
-                    <td className="text-xs text-slate-400 font-mono">{pub.date}</td>
-                  </tr>
-                ))}
+                {publishingActivity.length > 0 ? (
+                  publishingActivity.map((pub, idx) => (
+                    <tr key={pub.sku + idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                      <td className="font-semibold text-slate-800 dark:text-slate-100">{pub.name} <span className="text-2xs font-mono text-slate-400 block">{pub.sku}</span></td>
+                      <td className="text-slate-600 dark:text-slate-300 font-medium">{pub.store}</td>
+                      <td><Badge variant={pub.status === 'Published' ? 'success' : 'info'}>{pub.status}</Badge></td>
+                      <td className="text-xs text-slate-400 font-mono">{pub.date}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan={4} className="py-8 text-center text-slate-400 text-xs font-medium">No storefront publishing activity recorded in database</td></tr>
+                )}
               </tbody>
             </table>
           </div>

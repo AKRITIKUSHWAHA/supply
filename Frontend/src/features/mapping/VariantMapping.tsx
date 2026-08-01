@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Edit2, Trash2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Edit2, Trash2, Plus } from 'lucide-react'
 import { SectionHeader, FilterBar, Select, ConfirmDialog } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
@@ -12,23 +12,33 @@ interface VariantMappingItem {
   status: 'mapped' | 'unmapped'
 }
 
-const INITIAL_DATA: VariantMappingItem[] = [
-  { id: '1', supplierVariant: 'Color: Midnight Black / 16GB RAM', supplierName: 'TechParts Int.', masterVariant: 'Color: Black / Memory: 16GB', status: 'mapped' },
-  { id: '2', supplierVariant: 'Size: 120mm / Color: ARGB', supplierName: 'TechParts Int.', masterVariant: 'Size: 120mm / Lighting: RGB', status: 'mapped' },
-  { id: '3', supplierVariant: 'Capacity: 1TB / Form: M.2 NVMe', supplierName: 'GlobalSource Ltd.', masterVariant: 'Storage: 1TB NVMe', status: 'mapped' },
-  { id: '4', supplierVariant: 'Layout: US English / Switch: Red', supplierName: 'GlobalSource Ltd.', masterVariant: 'Layout: US / Switch: Linear Red', status: 'mapped' },
-  { id: '5', supplierVariant: 'Volt: 850W Gold Cert', supplierName: 'AcmeDistributors', masterVariant: '', status: 'unmapped' },
-]
-
 export const VariantMapping: React.FC = () => {
-  const [items, setItems] = useState<VariantMappingItem[]>(INITIAL_DATA)
+  const [items, setItems] = useState<VariantMappingItem[]>([])
   const [search, setSearch] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
+  const [addOpen, setAddOpen] = useState(false)
+  const [newMapping, setNewMapping] = useState({ supplierVariant: '', supplierName: '', masterVariant: '' })
   const [editingItem, setEditingItem] = useState<VariantMappingItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editMasterVariant, setEditMasterVariant] = useState('')
+
+  const fetchMappings = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/variants')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch variant mappings:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchMappings()
+  }, [])
 
   const filtered = items.filter(item => {
     const matchesSearch =
@@ -42,29 +52,65 @@ export const VariantMapping: React.FC = () => {
 
   const suppliers = Array.from(new Set(items.map(i => i.supplierName)))
 
+  const handleCreateMapping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMapping.supplierVariant.trim()) return
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/variants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierVariant: newMapping.supplierVariant,
+          supplierName: newMapping.supplierName || 'Default Supplier',
+          masterVariant: newMapping.masterVariant,
+        })
+      })
+      const created = await res.json()
+      setItems(prev => [created, ...prev])
+      setAddOpen(false)
+      setNewMapping({ supplierVariant: '', supplierName: '', masterVariant: '' })
+    } catch (err) {
+      console.error('Failed to create variant mapping:', err)
+    }
+  }
+
   const handleOpenEdit = (item: VariantMappingItem) => {
     setEditingItem(item)
     setEditMasterVariant(item.masterVariant)
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingItem) return
     const updated = editMasterVariant.trim()
-    setItems(prev =>
-      prev.map(i =>
-        i.id === editingItem.id
-          ? { ...i, masterVariant: updated, status: updated ? 'mapped' : 'unmapped' }
-          : i
-      )
-    )
-    setEditingItem(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/mappings/variants/${editingItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierVariant: editingItem.supplierVariant,
+          supplierName: editingItem.supplierName,
+          masterVariant: updated,
+        })
+      })
+      const updatedItem = await res.json()
+      setItems(prev => prev.map(i => i.id === editingItem.id ? updatedItem : i))
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Failed to update variant mapping:', err)
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deletingId) return
-    setItems(prev => prev.filter(i => i.id !== deletingId))
-    setDeletingId(null)
+    try {
+      await fetch(`http://localhost:5000/api/mappings/variants/${deletingId}`, { method: 'DELETE' })
+      setItems(prev => prev.filter(i => i.id !== deletingId))
+    } catch (err) {
+      console.error('Failed to delete variant mapping:', err)
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -72,6 +118,11 @@ export const VariantMapping: React.FC = () => {
       <SectionHeader
         title="Variant Mapping"
         subtitle="Map supplier product variants to Master Catalog variant structures"
+        actions={
+          <button onClick={() => setAddOpen(true)} className="btn-primary btn-sm flex items-center gap-1.5 cursor-pointer">
+            <Plus size={14} /> Add Variant Mapping
+          </button>
+        }
       />
 
       <FilterBar search={search} onSearch={setSearch} placeholder="Search supplier variant or master variant...">
@@ -152,6 +203,29 @@ export const VariantMapping: React.FC = () => {
         </div>
       </div>
 
+      {/* Add Modal */}
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Variant Mapping" subtitle="Create a new supplier variant to master variant mapping rule" size="md">
+        <form onSubmit={handleCreateMapping} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Variant *</label>
+            <input type="text" required value={newMapping.supplierVariant} onChange={e => setNewMapping({ ...newMapping, supplierVariant: e.target.value })} placeholder="e.g. Color: Midnight Black / 16GB RAM" className="input" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Name</label>
+            <input type="text" value={newMapping.supplierName} onChange={e => setNewMapping({ ...newMapping, supplierName: e.target.value })} placeholder="e.g. TechParts Int." className="input" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Master Variant</label>
+            <input type="text" value={newMapping.masterVariant} onChange={e => setNewMapping({ ...newMapping, masterVariant: e.target.value })} placeholder="e.g. Color: Black / Memory: 16GB" className="input" />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Create Mapping</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Modal */}
       <Modal open={editingItem !== null} onClose={() => setEditingItem(null)} title="Edit Variant Mapping" subtitle={`Supplier Variant: ${editingItem?.supplierVariant}`} size="md">
         <form onSubmit={handleSaveEdit} className="space-y-4">
           <div>

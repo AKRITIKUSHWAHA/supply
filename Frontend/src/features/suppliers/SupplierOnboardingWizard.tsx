@@ -6,11 +6,11 @@ import type { ConnectionType, Supplier } from '../../types'
 
 const STEPS = [
   { id: 1, title: 'Supplier Information', desc: 'Company details & connection type' },
-  { id: 2, title: 'Connection & Auth',     desc: 'Endpoint host & credentials' },
-  { id: 3, title: 'Sync Schedule',         desc: 'Inventory & price sync frequencies' },
-  { id: 4, title: 'Data Mapping',           desc: 'Master schema column alignment' },
-  { id: 5, title: 'Import Validation',     desc: 'Dry-run preview & error check' },
-  { id: 6, title: 'Activation',             desc: 'Review & deploy live pipeline' },
+  { id: 2, title: 'Connection & Auth', desc: 'Endpoint host & credentials' },
+  { id: 3, title: 'Sync Schedule', desc: 'Inventory & price sync frequencies' },
+  { id: 4, title: 'Data Mapping', desc: 'Master schema column alignment' },
+  { id: 5, title: 'Import Validation', desc: 'Dry-run preview & error check' },
+  { id: 6, title: 'Activation', desc: 'Review & deploy live pipeline' },
 ]
 
 export const SupplierOnboardingWizard: React.FC = () => {
@@ -71,30 +71,34 @@ export const SupplierOnboardingWizard: React.FC = () => {
     if (currentStep > 1) setCurrentStep(prev => prev - 1)
   }
 
-  const handleFinish = () => {
-    const createdSupplier: Supplier = {
-      id: `sup_${Date.now()}`,
-      name: formData.name.trim() || 'New Supplier Company',
-      code: (formData.code.trim() || `SUP-${Date.now().toString().slice(-4)}`).toUpperCase(),
-      connectionType: formData.connectionType,
-      status: 'connected',
-      productCount: 1240,
-      errorCount: 0,
-      country: 'United States',
-      lastSync: new Date().toISOString(),
-      contactEmail: formData.contactEmail || 'contact@supplier.com',
-      contactName: formData.contactName || 'Account Manager',
-      createdAt: new Date().toISOString(),
-      credentials: {
-        apiUrl: formData.apiUrl,
-        apiKey: formData.apiKey,
-        ftpHost: formData.ftpHost,
-        ftpUsername: formData.ftpUsername,
-      },
+  const handleFinish = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim() || 'New Supplier Company',
+          code: (formData.code.trim() || `SUP-${Date.now().toString().slice(-4)}`).toUpperCase(),
+          connectionType: formData.connectionType,
+          status: 'connected',
+          country: 'United States',
+          contactEmail: formData.contactEmail || 'contact@supplier.com',
+          contactName: formData.contactName || 'Account Manager',
+          credentials: {
+            apiUrl: formData.apiUrl,
+            apiKey: formData.apiKey,
+            ftpHost: formData.ftpHost,
+            ftpUsername: formData.ftpUsername,
+          },
+        })
+      })
+      const createdSupplier = await res.json()
+      setSuppliersList(prev => [createdSupplier, ...prev])
+    } catch (err) {
+      console.error('Failed to create onboarded supplier:', err)
+    } finally {
+      navigate('/suppliers')
     }
-
-    setSuppliersList(prev => [createdSupplier, ...prev])
-    navigate('/suppliers')
   }
 
   return (
@@ -122,22 +126,20 @@ export const SupplierOnboardingWizard: React.FC = () => {
               <div
                 key={s.id}
                 onClick={() => { if (s.id < currentStep) setCurrentStep(s.id); }}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  isCurrent
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${isCurrent
                     ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-500 text-amber-900 dark:text-amber-200 shadow-sm'
                     : isCompleted
-                    ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                    : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-400'
-                }`}
+                      ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                      : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-400'
+                  }`}
               >
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs font-bold ${
-                    isCurrent
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs font-bold ${isCurrent
                       ? 'bg-amber-500 text-white'
                       : isCompleted
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                  }`}>
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}>
                     {isCompleted ? <Check size={12} /> : s.id}
                   </span>
                   <span className="text-xs font-extrabold truncate">{s.title}</span>
@@ -151,7 +153,7 @@ export const SupplierOnboardingWizard: React.FC = () => {
 
       {/* Step Content Card */}
       <div className="card p-6 min-h-[420px] flex flex-col justify-between">
-        
+
         {/* Step 1: Supplier Information */}
         {currentStep === 1 && (
           <div className="space-y-4 max-w-2xl">

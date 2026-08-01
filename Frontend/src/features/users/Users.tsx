@@ -36,12 +36,37 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 
 export const Users: React.FC = () => {
   const { setViewProfileUser } = useAuth()
-  const [usersList, setUsersList] = useState<User[]>(mockUsers)
+  const [usersList, setUsersList] = useState<User[]>([])
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [inviteOpen, setInviteOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/users')
+      const json = await res.json()
+      if (json && json.data && Array.isArray(json.data.users)) {
+        const mapped = json.data.users.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: (u.role?.name || u.role || 'catalog_manager').toLowerCase().replace(/\s+/g, '_') as UserRole,
+          status: u.status || 'active',
+          lastActive: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+        }))
+        setUsersList(mapped)
+      }
+    } catch (err) {
+      console.error('Failed to fetch users:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchUsers()
+  }, [])
 
   // Invite Form States
   const [inviteName, setInviteName] = useState('')
@@ -85,7 +110,7 @@ export const Users: React.FC = () => {
     setInviteOpen(true)
   }
 
-  const handleSendInvite = (e: React.FormEvent) => {
+  const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
 
@@ -112,18 +137,6 @@ export const Users: React.FC = () => {
       return
     }
 
-    const newUser: User = {
-      id: `u_${Date.now()}`,
-      name: cleanName,
-      email: cleanEmail,
-      role: inviteRole,
-      status: 'invited',
-      createdAt: new Date().toISOString(),
-      department: inviteRole === 'catalog_manager' ? 'Catalog & Merchandising' : inviteRole === 'administrator' ? 'Operations' : 'Platform Governance',
-    }
-
-    setUsersList(prev => [newUser, ...prev])
-    setInviteOpen(false)
     setInviteName('')
     setInviteEmail('')
     showNotification(`Invitation email sent to ${newUser.email}! Account provisioned as ${ROLE_LABELS[inviteRole]}.`)

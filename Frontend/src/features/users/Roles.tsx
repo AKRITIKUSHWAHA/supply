@@ -25,12 +25,39 @@ const DEPARTMENTS = [
 ]
 
 export const Roles: React.FC = () => {
-  const [rolesList, setRolesList] = useState<Role[]>(mockRoles)
+  const [rolesList, setRolesList] = useState<Role[]>([])
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [deleteConfirmRole, setDeleteConfirmRole] = useState<Role | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const fetchRoles = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/roles')
+      const json = await res.json()
+      if (json && json.data && Array.isArray(json.data.roles)) {
+        const mapped = json.data.roles.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description || `${r.name} Enterprise Role`,
+          usersCount: r.usersCount || 0,
+          permissions: r.permissions ? r.permissions.map((p: any) => p.permission?.name || p.name) : ['dashboard'],
+          department: 'Platform Operations',
+          dataScope: 'all',
+          requiresMfa: true,
+          sessionTimeout: '1h',
+        }))
+        setRolesList(mapped)
+      }
+    } catch (err) {
+      console.error('Failed to fetch roles:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchRoles()
+  }, [])
 
   // Form states for Enterprise Role Creation
   const [formName, setFormName] = useState('')

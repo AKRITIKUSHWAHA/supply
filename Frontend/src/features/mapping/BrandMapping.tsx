@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Edit2, Trash2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Edit2, Trash2, Plus } from 'lucide-react'
 import { SectionHeader, FilterBar, Select, ConfirmDialog } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
@@ -12,23 +12,33 @@ interface BrandMappingItem {
   status: 'mapped' | 'unmapped'
 }
 
-const INITIAL_DATA: BrandMappingItem[] = [
-  { id: '1', supplierBrand: 'ASUS Republic of Gamers', supplierName: 'TechParts Int.', masterBrand: 'ASUS ROG', status: 'mapped' },
-  { id: '2', supplierBrand: 'Corsair Vengeance', supplierName: 'TechParts Int.', masterBrand: 'Corsair', status: 'mapped' },
-  { id: '3', supplierBrand: 'Samsung Enterprise', supplierName: 'GlobalSource Ltd.', masterBrand: 'Samsung', status: 'mapped' },
-  { id: '4', supplierBrand: 'Logitech Pro', supplierName: 'GlobalSource Ltd.', masterBrand: 'Logitech', status: 'mapped' },
-  { id: '5', supplierBrand: 'ACME Industrial', supplierName: 'AcmeDistributors', masterBrand: '', status: 'unmapped' },
-]
-
 export const BrandMapping: React.FC = () => {
-  const [items, setItems] = useState<BrandMappingItem[]>(INITIAL_DATA)
+  const [items, setItems] = useState<BrandMappingItem[]>([])
   const [search, setSearch] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
+  const [addOpen, setAddOpen] = useState(false)
+  const [newMapping, setNewMapping] = useState({ supplierBrand: '', supplierName: '', masterBrand: '' })
   const [editingItem, setEditingItem] = useState<BrandMappingItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editMasterBrand, setEditMasterBrand] = useState('')
+
+  const fetchMappings = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/brands')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch brand mappings:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchMappings()
+  }, [])
 
   const filtered = items.filter(item => {
     const matchesSearch =
@@ -42,29 +52,65 @@ export const BrandMapping: React.FC = () => {
 
   const suppliers = Array.from(new Set(items.map(i => i.supplierName)))
 
+  const handleCreateMapping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMapping.supplierBrand.trim()) return
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierBrand: newMapping.supplierBrand,
+          supplierName: newMapping.supplierName || 'Default Supplier',
+          masterBrand: newMapping.masterBrand,
+        })
+      })
+      const created = await res.json()
+      setItems(prev => [created, ...prev])
+      setAddOpen(false)
+      setNewMapping({ supplierBrand: '', supplierName: '', masterBrand: '' })
+    } catch (err) {
+      console.error('Failed to create brand mapping:', err)
+    }
+  }
+
   const handleOpenEdit = (item: BrandMappingItem) => {
     setEditingItem(item)
     setEditMasterBrand(item.masterBrand)
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingItem) return
     const updated = editMasterBrand.trim()
-    setItems(prev =>
-      prev.map(i =>
-        i.id === editingItem.id
-          ? { ...i, masterBrand: updated, status: updated ? 'mapped' : 'unmapped' }
-          : i
-      )
-    )
-    setEditingItem(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/mappings/brands/${editingItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierBrand: editingItem.supplierBrand,
+          supplierName: editingItem.supplierName,
+          masterBrand: updated,
+        })
+      })
+      const updatedItem = await res.json()
+      setItems(prev => prev.map(i => i.id === editingItem.id ? updatedItem : i))
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Failed to update brand mapping:', err)
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deletingId) return
-    setItems(prev => prev.filter(i => i.id !== deletingId))
-    setDeletingId(null)
+    try {
+      await fetch(`http://localhost:5000/api/mappings/brands/${deletingId}`, { method: 'DELETE' })
+      setItems(prev => prev.filter(i => i.id !== deletingId))
+    } catch (err) {
+      console.error('Failed to delete brand mapping:', err)
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -72,6 +118,11 @@ export const BrandMapping: React.FC = () => {
       <SectionHeader
         title="Brand Mapping"
         subtitle="Map supplier brand names to Master Catalog brands"
+        actions={
+          <button onClick={() => setAddOpen(true)} className="btn-primary btn-sm flex items-center gap-1.5 cursor-pointer">
+            <Plus size={14} /> Add Brand Mapping
+          </button>
+        }
       />
 
       <FilterBar search={search} onSearch={setSearch} placeholder="Search supplier brand or master brand...">
@@ -152,6 +203,29 @@ export const BrandMapping: React.FC = () => {
         </div>
       </div>
 
+      {/* Add Modal */}
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Brand Mapping" subtitle="Create a new supplier brand to master brand mapping rule" size="md">
+        <form onSubmit={handleCreateMapping} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Brand *</label>
+            <input type="text" required value={newMapping.supplierBrand} onChange={e => setNewMapping({ ...newMapping, supplierBrand: e.target.value })} placeholder="e.g. ASUS Republic of Gamers" className="input" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Name</label>
+            <input type="text" value={newMapping.supplierName} onChange={e => setNewMapping({ ...newMapping, supplierName: e.target.value })} placeholder="e.g. TechParts Int." className="input" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Master Brand</label>
+            <input type="text" value={newMapping.masterBrand} onChange={e => setNewMapping({ ...newMapping, masterBrand: e.target.value })} placeholder="e.g. ASUS ROG" className="input" />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Create Mapping</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Modal */}
       <Modal open={editingItem !== null} onClose={() => setEditingItem(null)} title="Edit Brand Mapping" subtitle={`Supplier Brand: ${editingItem?.supplierBrand}`} size="md">
         <form onSubmit={handleSaveEdit} className="space-y-4">
           <div>

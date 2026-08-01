@@ -4,6 +4,54 @@ import { SectionHeader, Tabs } from '../../components/ui'
 
 export const Settings: React.FC = () => {
   const [tab, setTab] = useState('general')
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const [platformName, setPlatformName] = useState('SupplyBridge Enterprise PIM')
+  const [currency, setCurrency] = useState('USD')
+  const [timezone, setTimezone] = useState('UTC')
+  const [dateFormat, setDateFormat] = useState('MM/DD/YYYY')
+  const [maintenanceMode, setMaintenanceMode] = useState(false)
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/settings')
+      const data = await res.json()
+      if (data) {
+        if (data.platformName) setPlatformName(data.platformName)
+        if (data.currency) setCurrency(data.currency)
+        if (data.timezone) setTimezone(data.timezone)
+        if (data.dateFormat) setDateFormat(data.dateFormat)
+        if (data.maintenanceMode !== undefined) setMaintenanceMode(data.maintenanceMode)
+      }
+    } catch (err) {
+      console.error('Failed to fetch settings:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await fetch('http://localhost:5000/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platformName,
+          currency,
+          timezone,
+          dateFormat,
+          maintenanceMode,
+        })
+      })
+      setToastMessage('Settings saved successfully!')
+      setTimeout(() => setToastMessage(null), 3000)
+    } catch (err) {
+      console.error('Failed to save settings:', err)
+    }
+  }
 
   const tabs = [
     { id: 'general',       label: 'General' },
@@ -26,18 +74,18 @@ export const Settings: React.FC = () => {
 
       <div className="max-w-2xl">
         {tab === 'general' && (
-          <div className="card p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <form onSubmit={handleSaveSettings} className="card p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
             <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1 flex items-center gap-2"><Globe size={16} className="text-primary-600 dark:text-primary-400" /> General Settings</h3>
-            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Platform Name</label><input className="input" defaultValue="SupplyBridge Enterprise PIM" /></div>
-            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Default Currency</label><select className="select"><option>USD — US Dollar</option><option>EUR — Euro</option><option>GBP — British Pound</option></select></div>
-            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Default Timezone</label><select className="select"><option>UTC</option><option>US/Eastern</option><option>US/Pacific</option><option>Europe/London</option></select></div>
-            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Date Format</label><select className="select"><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option><option>YYYY-MM-DD</option></select></div>
+            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Platform Name</label><input className="input" value={platformName} onChange={e => setPlatformName(e.target.value)} /></div>
+            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Default Currency</label><select className="select" value={currency} onChange={e => setCurrency(e.target.value)}><option value="USD">USD — US Dollar</option><option value="EUR">EUR — Euro</option><option value="GBP">GBP — British Pound</option></select></div>
+            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Default Timezone</label><select className="select" value={timezone} onChange={e => setTimezone(e.target.value)}><option value="UTC">UTC</option><option value="US/Eastern">US/Eastern</option><option value="US/Pacific">US/Pacific</option><option value="Europe/London">Europe/London</option></select></div>
+            <div><label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Date Format</label><select className="select" value={dateFormat} onChange={e => setDateFormat(e.target.value)}><option value="MM/DD/YYYY">MM/DD/YYYY</option><option value="DD/MM/YYYY">DD/MM/YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></div>
             <div className="flex items-center gap-3 pt-2">
-              <input type="checkbox" id="maintenance" className="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900" />
+              <input type="checkbox" id="maintenance" checked={maintenanceMode} onChange={e => setMaintenanceMode(e.target.checked)} className="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900" />
               <label htmlFor="maintenance" className="text-sm text-slate-700 dark:text-slate-200">Enable Maintenance Mode</label>
             </div>
-            <button className="btn-primary">Save General Settings</button>
-          </div>
+            <button type="submit" className="btn-primary">Save General Settings</button>
+          </form>
         )}
 
         {tab === 'api' && (

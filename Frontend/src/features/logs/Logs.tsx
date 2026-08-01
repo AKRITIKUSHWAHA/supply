@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileText, AlertTriangle, AlertCircle, CheckCircle2, Info, Search,
-  RefreshCw, Terminal, Activity, Eye, X, FileSpreadsheet, ChevronLeft, ChevronRight
+  RefreshCw, Terminal, Activity, Eye, X, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2
 } from 'lucide-react'
 import { SectionHeader, Tabs } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
@@ -24,121 +24,49 @@ export interface LogEntryItem {
   userId?: string
 }
 
-const INITIAL_LOGS: LogEntryItem[] = [
-  {
-    id: 'log-101',
-    timestamp: '2026-07-27 16:15:22',
-    logType: 'API Logs',
-    supplier: 'TechParts Int.',
-    store: 'SupplyBridge US Store',
-    module: 'Inventory',
-    severity: 'Info',
-    message: 'TechParts REST API v2 inventory batch payload received (18,420 items processed).',
-    status: 'Success',
-    details: 'HTTP 200 OK — Payload size: 4.2 MB. Delta sync completed in 1.4s.',
-    ip: '192.168.1.45',
-    userId: 'system_daemon',
-  },
-  {
-    id: 'log-102',
-    timestamp: '2026-07-27 16:10:04',
-    logType: 'Sync Logs',
-    supplier: 'PrimeSupply Corp',
-    store: 'EU Direct Commerce',
-    module: 'Pricing',
-    severity: 'Info',
-    message: 'Storefront price synchronization completed dynamically (11,200 items updated).',
-    status: 'Success',
-    details: 'Pushed price updates to WooCommerce storefront. 0 API throttling errors.',
-    ip: '10.0.0.12',
-    userId: 'job_scheduler',
-  },
-  {
-    id: 'log-103',
-    timestamp: '2026-07-27 15:45:12',
-    logType: 'Error Logs',
-    supplier: 'Acme Distributors',
-    store: 'Global',
-    module: 'Images',
-    severity: 'Error',
-    message: 'High-res product image download timeout from AcmeDistributors SFTP server.',
-    status: 'Failed',
-    details: 'Connection timed out after 30000ms: sftp://acme.suppliertest.com:22/media/hq_img_4992.png',
-    ip: '172.16.0.8',
-    userId: 'image_downloader',
-  },
-  {
-    id: 'log-104',
-    timestamp: '2026-07-27 15:22:40',
-    logType: 'FTP Logs',
-    supplier: 'GlobalSource Ltd.',
-    store: 'Global',
-    module: 'Catalog',
-    severity: 'Warning',
-    message: 'FTP feed import file parsed with 12 validation warnings (Missing images).',
-    status: 'Warning',
-    details: 'FTP File: /feeds/daily_catalog_20260727.xml. 14,800 items total, 12 sent to Validation Center.',
-    ip: '192.168.2.101',
-    userId: 'ftp_worker',
-  },
-  {
-    id: 'log-105',
-    timestamp: '2026-07-27 14:50:00',
-    logType: 'User Activity Logs',
-    supplier: 'System',
-    store: 'Global',
-    module: 'Validation',
-    severity: 'Info',
-    message: 'User Alex Morrison approved 45 products in the Validation Center.',
-    status: 'Success',
-    details: 'Action: Mass Product Approval. Products moved to Ready for Approval state.',
-    ip: '192.168.1.10',
-    userId: 'alex_morrison',
-  },
-  {
-    id: 'log-106',
-    timestamp: '2026-07-27 14:15:30',
-    logType: 'Import Logs',
-    supplier: 'QuickShip Outlet Store',
-    store: 'Global',
-    module: 'Catalog',
-    severity: 'Info',
-    message: 'Catalog import job #job_84290 finished (7,300 SKUs successfully parsed).',
-    status: 'Success',
-    details: 'Import throughput: 5,200 SKUs/min. Validation pass rate: 99.8%.',
-    ip: '10.0.0.5',
-    userId: 'catalog_ingest',
-  },
-  {
-    id: 'log-107',
-    timestamp: '2026-07-27 13:40:18',
-    logType: 'Sync Logs',
-    supplier: 'TechParts Int.',
-    store: 'Global Electronics Hub',
-    module: 'Storefront',
-    severity: 'Error',
-    message: 'Rate limit HTTP 429 exceeded on Shopify storefront API endpoint.',
-    status: 'Failed',
-    details: 'HTTP 429 Too Many Requests. Retrying batch push in 600 seconds.',
-    ip: '192.168.1.45',
-    userId: 'store_pusher',
-  },
-]
+export interface ActivityFeedItem {
+  id: string
+  time: string
+  timestamp: string
+  message: string
+  color: string
+  category: string
+}
 
-const INITIAL_ACTIVITIES = [
-  { id: 'act-1', time: '10 min ago', timestamp: '2026-07-27 16:15:00', message: 'TechParts International inventory feed sync completed (18,420 items).', color: 'emerald', category: 'Supplier' },
-  { id: 'act-2', time: '25 min ago', timestamp: '2026-07-27 16:00:00', message: 'Storefront price push executed to EU Direct Commerce (11,200 items updated).', color: 'blue', category: 'Pricing' },
-  { id: 'act-3', time: '45 min ago', timestamp: '2026-07-27 15:40:00', message: 'Acme Distributors SFTP connection timeout on product image download.', color: 'rose', category: 'Errors' },
-  { id: 'act-4', time: '1 hr ago', timestamp: '2026-07-27 15:20:00', message: 'GlobalSource Ltd. FTP catalog feed imported with 12 validation warnings.', color: 'amber', category: 'Warnings' },
-  { id: 'act-5', time: '2 hr ago', timestamp: '2026-07-27 14:20:00', message: 'Manual triggered re-validation action executed by Alex Morrison.', color: 'violet', category: 'Manual Actions' },
-]
+const INITIAL_LOGS: LogEntryItem[] = []
+const INITIAL_ACTIVITIES: ActivityFeedItem[] = []
 
 export const Logs: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const currentView = searchParams.get('view') === 'system' ? 'system' : 'activity'
 
   const [logsList, setLogsList] = useState<LogEntryItem[]>(INITIAL_LOGS)
-  const [activitiesList] = useState(INITIAL_ACTIVITIES)
+  const [activitiesList, setActivitiesList] = useState<ActivityFeedItem[]>(INITIAL_ACTIVITIES)
+
+  const fetchLogs = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/logs')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setLogsList(data)
+        const mappedActivities: ActivityFeedItem[] = data.map((l: any) => ({
+          id: `act-${l.id}`,
+          time: l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : 'Just now',
+          timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
+          message: l.message || 'System activity recorded',
+          color: l.severity === 'Error' ? 'rose' : l.severity === 'Warning' ? 'amber' : 'emerald',
+          category: l.module || 'System',
+        }))
+        setActivitiesList(mappedActivities)
+      }
+    } catch (err) {
+      console.error('Failed to fetch logs from backend:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogs()
+  }, [])
 
   // Independent Searches for Both Tabs
   const [activitySearch, setActivitySearch] = useState('')
@@ -164,31 +92,24 @@ export const Logs: React.FC = () => {
   }
 
   // Reload Backend Logs
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
     showNotification('Refreshing live log data from backend...')
+    await fetchLogs()
+    setIsRefreshing(false)
+    showNotification('Live logs refreshed successfully!')
+  }
 
-    setTimeout(() => {
-      setLogsList(prev => [
-        {
-          id: `log-${Date.now()}`,
-          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          logType: 'Sync Logs',
-          supplier: 'TechParts Int.',
-          store: 'SupplyBridge US Store',
-          module: 'Inventory',
-          severity: 'Info',
-          message: 'Live background sync telemetry heartbeat verified (100% Synced).',
-          status: 'Success',
-          details: 'Automatic heartbeat probe. All operational pipelines online.',
-          ip: '127.0.0.1',
-          userId: 'system_daemon',
-        },
-        ...prev,
-      ])
-      setIsRefreshing(false)
-      showNotification('Live logs refreshed successfully!')
-    }, 800)
+  // Clear All System Logs
+  const handleClearLogs = async () => {
+    try {
+      await fetch('http://localhost:5000/api/logs/clear', { method: 'DELETE' })
+      setLogsList([])
+      setActivitiesList([])
+      showNotification('All system logs cleared successfully!')
+    } catch (err) {
+      console.error('Failed to clear system logs:', err)
+    }
   }
 
   // Export Filtered CSV Report
@@ -238,19 +159,16 @@ export const Logs: React.FC = () => {
   const filteredSystemLogs = useMemo(() => {
     return logsList
       .slice()
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .filter(log => {
-        const query = systemSearch.toLowerCase()
+      .filter(l => {
         const matchSearch =
-          log.message.toLowerCase().includes(query) ||
-          log.supplier.toLowerCase().includes(query) ||
-          log.store.toLowerCase().includes(query) ||
-          (log.details && log.details.toLowerCase().includes(query)) ||
-          log.logType.toLowerCase().includes(query)
+          l.message.toLowerCase().includes(systemSearch.toLowerCase()) ||
+          l.supplier.toLowerCase().includes(systemSearch.toLowerCase()) ||
+          l.store.toLowerCase().includes(systemSearch.toLowerCase()) ||
+          (l.details || '').toLowerCase().includes(systemSearch.toLowerCase())
 
-        const matchLogType = logTypeFilter === 'all' || log.logType === logTypeFilter
-        const matchSeverity = severityFilter === 'all' || log.severity.toLowerCase() === severityFilter.toLowerCase()
-        const matchModule = moduleFilter === 'all' || log.module.toLowerCase() === moduleFilter.toLowerCase()
+        const matchLogType = logTypeFilter === 'all' || l.logType === logTypeFilter
+        const matchSeverity = severityFilter === 'all' || l.severity.toLowerCase() === severityFilter.toLowerCase()
+        const matchModule = moduleFilter === 'all' || l.module.toLowerCase() === moduleFilter.toLowerCase()
 
         return matchSearch && matchLogType && matchSeverity && matchModule
       })
@@ -258,158 +176,123 @@ export const Logs: React.FC = () => {
 
   // Pagination Math
   const totalPages = Math.ceil(filteredSystemLogs.length / pageSize) || 1
-  const paginatedLogs = filteredSystemLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedSystemLogs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredSystemLogs.slice(start, start + pageSize)
+  }, [filteredSystemLogs, currentPage, pageSize])
 
-  // Badge Color Helper
-  const getSeverityBadge = (severity: 'Info' | 'Warning' | 'Error') => {
-    switch (severity) {
-      case 'Error':   return <Badge variant="danger" dot>Error</Badge>
-      case 'Warning': return <Badge variant="warning" dot>Warning</Badge>
-      case 'Info':    return <Badge variant="info" dot>Info</Badge>
-      default:        return <Badge variant="neutral">{severity}</Badge>
-    }
-  }
-
-  const getStatusBadge = (status: 'Success' | 'Failed' | 'Pending' | 'Warning') => {
-    switch (status) {
-      case 'Success': return <Badge variant="success" dot>Success</Badge>
-      case 'Failed':  return <Badge variant="danger" dot>Failed</Badge>
-      case 'Warning': return <Badge variant="warning" dot>Warning</Badge>
-      default:        return <Badge variant="neutral" dot>{status}</Badge>
-    }
+  const handleTabChange = (tabId: string) => {
+    setSearchParams({ view: tabId })
   }
 
   return (
-    <div className="relative space-y-6">
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-semibold border border-slate-700"
-          >
-            <CheckCircle2 size={16} className="text-emerald-400" />
-            {toastMessage}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+    <div className="space-y-6">
       <SectionHeader
-        title="Activity & Logs"
-        subtitle="Real-time operational activity feed timeline and system execution audit logs"
+        title="System Logs & Monitoring"
+        subtitle="Real-time telemetry, audit trails, and execution logs across all data pipelines"
         actions={
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
-              className="btn-secondary btn-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer text-xs"
-              title="Download Log Audit CSV"
+              className="btn-secondary btn-sm flex items-center gap-1.5"
             >
-              <FileSpreadsheet size={14} className="text-emerald-600 dark:text-emerald-400" /> Export CSV
+              <FileSpreadsheet size={14} /> Export CSV Audit
             </button>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="btn-primary btn-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer text-xs shadow-md shadow-indigo-500/20"
+              className="btn-primary btn-sm flex items-center gap-1.5"
             >
-              <RefreshCw size={14} className={isRefreshing ? "animate-spin text-white" : ""} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh Logs'}
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} /> Refresh Logs
             </button>
           </div>
         }
       />
 
-      {/* Main View Mode Tabs */}
-      <Tabs
-        tabs={mainTabs}
-        active={currentView}
-        onChange={v => setSearchParams({ view: v })}
-      />
+      {/* Main Tabs Navigation */}
+      <Tabs tabs={mainTabs} active={currentView} onChange={handleTabChange} />
 
-      {/* 1. ACTIVITY FEED VIEW */}
+      {/* Toast Notification Banner */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-3 bg-slate-900 text-white text-xs font-medium rounded-lg shadow-lg flex items-center gap-2"
+          >
+            <CheckCircle2 size={14} className="text-emerald-400" />
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* VIEW 1: ACTIVITY FEED */}
       {currentView === 'activity' && (
         <div className="space-y-4">
-          <div className="card p-4 border border-slate-200/90 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative w-full sm:w-80">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search operational activity timeline..."
+                placeholder="Search activity timeline..."
                 value={activitySearch}
                 onChange={e => setActivitySearch(e.target.value)}
                 className="input pl-9 text-xs"
               />
-              {activitySearch && (
-                <button onClick={() => setActivitySearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                  <X size={14} />
-                </button>
-              )}
             </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1">
-              {[
-                'All', 'Supplier', 'Store', 'Inventory', 'Pricing', 'Images', 'Errors', 'Warnings', 'Manual Actions'
-              ].map(f => (
+            <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+              {['All', 'Supplier', 'Store', 'Inventory', 'Pricing', 'Errors', 'Warnings'].map(filter => (
                 <button
-                  key={f}
-                  onClick={() => setActivityFilter(f)}
-                  className={`px-3 py-1.5 rounded-xl text-2xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    activityFilter === f
-                      ? 'bg-primary-600 text-white shadow-xs'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  key={filter}
+                  onClick={() => setActivityFilter(filter)}
+                  className={`px-3 py-1 text-2xs font-semibold rounded-full transition-colors ${
+                    activityFilter === filter
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
                   }`}
                 >
-                  {f}
+                  {filter}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="card p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
-            {filteredActivities.length === 0 ? (
-              <div className="py-12 text-center text-slate-400 text-xs">
-                No activity feed events match your search and filter criteria.
-              </div>
-            ) : (
-              filteredActivities.map(act => {
-                const colorMap: Record<string, string> = {
-                  emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-                  blue: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border-blue-200 dark:border-blue-800',
-                  rose: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border-rose-200 dark:border-rose-800',
-                  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border-amber-200 dark:border-amber-800',
-                  violet: 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-400 border-violet-200 dark:border-violet-800',
-                }
-                return (
-                  <div key={act.id} className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border border-slate-100 dark:border-slate-800">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border ${colorMap[act.color]}`}>
-                      <Activity size={16} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-snug">{act.message}</p>
-                        <span className="text-2xs font-bold text-slate-400 font-mono flex-shrink-0">{act.time}</span>
+          <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            {filteredActivities.length > 0 ? (
+              <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
+                {filteredActivities.map(act => (
+                  <div key={act.id} className="relative flex items-start gap-3 group">
+                    <span className={`absolute -left-6 top-1 w-2.5 h-2.5 rounded-full ring-4 ring-white dark:ring-slate-900 bg-${act.color}-500`} />
+                    <div className="flex-1 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider">{act.category}</span>
+                        <span className="text-2xs text-slate-400">{act.time}</span>
                       </div>
-                      <p className="text-2xs text-slate-400 font-mono mt-0.5">Timestamp: {act.timestamp}</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-200 font-medium">{act.message}</p>
                     </div>
                   </div>
-                )
-              })
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-slate-400">
+                <Activity size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">No activity items match your search filter</p>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {/* 2. SYSTEM LOGS VIEW */}
+      {/* VIEW 2: SYSTEM LOGS TABLE */}
       {currentView === 'system' && (
         <div className="space-y-4">
-          {/* Search & Filters Bar */}
-          <div className="card p-4 border border-slate-200/90 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="relative col-span-1 sm:col-span-2">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search logs by message, supplier, store, or details..."
+                placeholder="Search system logs message, supplier, storefront..."
                 value={systemSearch}
                 onChange={e => {
                   setSystemSearch(e.target.value)
@@ -417,235 +300,189 @@ export const Logs: React.FC = () => {
                 }}
                 className="input pl-9 text-xs"
               />
-              {systemSearch && (
-                <button onClick={() => setSystemSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                  <X size={14} />
-                </button>
-              )}
             </div>
-
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              <select
-                className="select text-xs py-2 w-auto"
-                value={logTypeFilter}
-                onChange={e => {
-                  setLogTypeFilter(e.target.value)
-                  setCurrentPage(1)
-                }}
-              >
-                <option value="all">All Log Types</option>
-                <option value="API Logs">API Logs</option>
-                <option value="FTP Logs">FTP Logs</option>
-                <option value="Import Logs">Import Logs</option>
-                <option value="Sync Logs">Sync Logs</option>
-                <option value="User Activity Logs">User Activity Logs</option>
-                <option value="Error Logs">Error Logs</option>
-              </select>
-
-              <select
-                className="select text-xs py-2 w-auto"
-                value={severityFilter}
-                onChange={e => {
-                  setSeverityFilter(e.target.value)
-                  setCurrentPage(1)
-                }}
-              >
-                <option value="all">All Severities</option>
-                <option value="info">Info</option>
-                <option value="warning">Warning</option>
-                <option value="error">Error</option>
-              </select>
-
-              <select
-                className="select text-xs py-2 w-auto"
-                value={moduleFilter}
-                onChange={e => {
-                  setModuleFilter(e.target.value)
-                  setCurrentPage(1)
-                }}
-              >
-                <option value="all">All Modules</option>
-                <option value="catalog">Catalog</option>
-                <option value="inventory">Inventory</option>
-                <option value="pricing">Pricing</option>
-                <option value="validation">Validation</option>
-                <option value="storefront">Storefront</option>
-              </select>
-            </div>
+            <select
+              value={severityFilter}
+              onChange={e => {
+                setSeverityFilter(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="select text-xs"
+            >
+              <option value="all">All Severities</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+            </select>
+            <select
+              value={logTypeFilter}
+              onChange={e => {
+                setLogTypeFilter(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="select text-xs"
+            >
+              <option value="all">All Log Types</option>
+              <option value="API Logs">API Logs</option>
+              <option value="FTP Logs">FTP Logs</option>
+              <option value="Import Logs">Import Logs</option>
+              <option value="Sync Logs">Sync Logs</option>
+              <option value="User Activity Logs">User Activity Logs</option>
+              <option value="Error Logs">Error Logs</option>
+            </select>
           </div>
 
-          {/* System Logs Table */}
-          <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <div className="table-container w-full overflow-x-auto scrollbar-thin">
-              <table className="table min-w-[980px] w-full">
+          <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card">
+            <div className="table-container">
+              <table className="table">
                 <thead>
-                  <tr className="bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800">
-                    <th className="whitespace-nowrap px-4 py-3.5">TIMESTAMP</th>
-                    <th className="whitespace-nowrap px-4 py-3.5">LOG TYPE</th>
-                    <th className="whitespace-nowrap px-4 py-3.5">SUPPLIER</th>
-                    <th className="whitespace-nowrap px-4 py-3.5">STORE</th>
-                    <th className="whitespace-nowrap px-4 py-3.5">MODULE</th>
-                    <th className="whitespace-nowrap px-4 py-3.5">SEVERITY</th>
-                    <th className="whitespace-nowrap px-4 py-3.5">MESSAGE</th>
-                    <th className="whitespace-nowrap px-4 py-3.5">STATUS</th>
-                    <th className="whitespace-nowrap px-4 py-3.5 text-right pr-4">ACTION</th>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Log Type</th>
+                    <th>Supplier / Store</th>
+                    <th>Module</th>
+                    <th>Severity</th>
+                    <th>Message</th>
+                    <th className="text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {paginatedLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-400">
-                        <div className="flex flex-col items-center gap-2">
-                          <FileText size={24} className="text-slate-300" />
-                          <p className="font-medium text-xs">No system logs match your search and filter criteria.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    paginatedLogs.map(log => (
-                      <tr
-                        key={log.id}
-                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                        onClick={() => setSelectedLog(log)}
-                      >
-                        <td data-label="Timestamp" className="whitespace-nowrap px-4 py-3.5 font-mono text-2xs text-slate-500 dark:text-slate-400">
-                          {log.timestamp}
+                <tbody>
+                  {paginatedSystemLogs.length > 0 ? (
+                    paginatedSystemLogs.map(log => (
+                      <tr key={log.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="text-2xs font-mono text-slate-500 whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleString()}
                         </td>
-                        <td data-label="Log Type" className="whitespace-nowrap px-4 py-3.5">
-                          <span className="px-2 py-0.5 rounded text-2xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                        <td>
+                          <span className="text-2xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                             {log.logType}
                           </span>
                         </td>
-                        <td data-label="Supplier" className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          {log.supplier}
+                        <td>
+                          <div className="text-xs">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 block">{log.supplier}</span>
+                            <span className="text-2xs text-slate-400">{log.store}</span>
+                          </div>
                         </td>
-                        <td data-label="Store" className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 font-medium">
-                          {log.store}
+                        <td>
+                          <span className="text-2xs font-medium text-slate-600 dark:text-slate-400">{log.module}</span>
                         </td>
-                        <td data-label="Module" className="whitespace-nowrap px-4 py-3.5">
-                          <span className="text-2xs font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded font-bold">
-                            {log.module}
-                          </span>
+                        <td>
+                          <Badge
+                            variant={
+                              log.severity === 'Error' ? 'danger' : log.severity === 'Warning' ? 'warning' : 'info'
+                            }
+                          >
+                            {log.severity}
+                          </Badge>
                         </td>
-                        <td data-label="Severity" className="whitespace-nowrap px-4 py-3.5">
-                          {getSeverityBadge(log.severity)}
-                        </td>
-                        <td data-label="Message" className="whitespace-nowrap px-4 py-3.5 max-w-xs truncate text-xs text-slate-800 dark:text-slate-100 font-medium">
+                        <td className="max-w-xs truncate text-xs text-slate-700 dark:text-slate-300 font-medium">
                           {log.message}
                         </td>
-                        <td data-label="Status" className="whitespace-nowrap px-4 py-3.5">
-                          {getStatusBadge(log.status)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3.5 text-right pr-4" onClick={e => e.stopPropagation()}>
+                        <td className="text-right">
                           <button
                             onClick={() => setSelectedLog(log)}
-                            className="btn-secondary btn-sm inline-flex items-center gap-1 font-bold text-2xs py-1 px-2.5 cursor-pointer"
-                            title="View Event Diagnostics"
+                            className="btn-icon"
+                            title="Inspect Log Details"
                           >
-                            <Eye size={12} /> View
+                            <Eye size={14} />
                           </button>
                         </td>
                       </tr>
                     ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <Terminal size={32} className="mx-auto mb-2 opacity-50" />
+                        <p className="text-sm font-medium">No system logs found matching criteria</p>
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
             </div>
 
-            {/* Clean Pagination Footer */}
-            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-slate-50/50 dark:bg-slate-950/50">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium">
-                <span>Showing {filteredSystemLogs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredSystemLogs.length)} of {filteredSystemLogs.length} logs</span>
-                <select
-                  value={pageSize}
-                  onChange={e => {
-                    setPageSize(Number(e.target.value))
-                    setCurrentPage(1)
-                  }}
-                  className="select py-0.5 text-2xs bg-white dark:bg-slate-800"
-                >
-                  <option value={10}>10 rows</option>
-                  <option value={25}>25 rows</option>
-                  <option value={50}>50 rows</option>
-                </select>
+            {/* Pagination Controls */}
+            {filteredSystemLogs.length > 0 && (
+              <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                <div>
+                  Showing {Math.min((currentPage - 1) * pageSize + 1, filteredSystemLogs.length)} to{' '}
+                  {Math.min(currentPage * pageSize, filteredSystemLogs.length)} of {filteredSystemLogs.length} entries
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="btn-secondary btn-sm p-1.5 disabled:opacity-40"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="font-semibold">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="btn-secondary btn-sm p-1.5 disabled:opacity-40"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
               </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="btn-secondary btn-sm py-1 px-2 text-2xs disabled:opacity-40 cursor-pointer"
-                >
-                  <ChevronLeft size={12} /> Prev
-                </button>
-
-                <span className="px-2 text-2xs font-bold text-slate-700 dark:text-slate-300">
-                  Page {currentPage} of {totalPages}
-                </span>
-
-                <button
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className="btn-secondary btn-sm py-1 px-2 text-2xs disabled:opacity-40 cursor-pointer"
-                >
-                  Next <ChevronRight size={12} />
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Log Detail Diagnostics Modal */}
+      {/* Inspect Log Detail Modal */}
       <Modal
         open={selectedLog !== null}
         onClose={() => setSelectedLog(null)}
-        title="Event Diagnostics & Metadata"
-        subtitle={`Log ID: ${selectedLog?.id} · Type: ${selectedLog?.logType}`}
+        title="Log Telemetry Inspection"
+        subtitle={`Log ID: ${selectedLog?.id}`}
+        size="lg"
       >
         {selectedLog && (
           <div className="space-y-4 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Terminal className="text-primary-600" size={16} />
-                <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{selectedLog.logType}</span>
+            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div>
+                <p className="text-slate-400 font-semibold mb-0.5">Timestamp</p>
+                <p className="font-mono font-medium text-slate-800 dark:text-slate-200">{new Date(selectedLog.timestamp).toLocaleString()}</p>
               </div>
-              <div className="flex items-center gap-2">
-                {getSeverityBadge(selectedLog.severity)}
-                {getStatusBadge(selectedLog.status)}
+              <div>
+                <p className="text-slate-400 font-semibold mb-0.5">Log Type</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{selectedLog.logType}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 font-semibold mb-0.5">Supplier / Integration</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{selectedLog.supplier}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 font-semibold mb-0.5">Storefront Endpoint</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{selectedLog.store}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 font-semibold mb-0.5">Origin IP Address</p>
+                <p className="font-mono text-slate-800 dark:text-slate-200">{selectedLog.ip || '127.0.0.1'}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 font-semibold mb-0.5">Executor Identity</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{selectedLog.userId || 'system'}</p>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <h4 className="font-bold text-slate-800 dark:text-slate-100">Log Message</h4>
-              <p className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
+            <div>
+              <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Message</p>
+              <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-800 dark:text-slate-200 font-medium">
                 {selectedLog.message}
-              </p>
+              </div>
             </div>
 
-            {selectedLog.details && (
-              <div className="space-y-1.5">
-                <h4 className="font-bold text-slate-800 dark:text-slate-100">Diagnostic Technical Details</h4>
-                <pre className="p-3 bg-slate-900 dark:bg-slate-950 text-emerald-400 border border-slate-800 rounded-xl font-mono text-2xs leading-relaxed overflow-x-auto">
-                  {selectedLog.details}
-                </pre>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-850 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-2xs">
-              <div className="space-y-1">
-                <p className="font-bold text-slate-800 dark:text-slate-100 mb-1">Target Endpoint Context</p>
-                <p><span className="text-slate-400">Supplier:</span> <span className="font-bold text-slate-700 dark:text-slate-200">{selectedLog.supplier}</span></p>
-                <p><span className="text-slate-400">Storefront:</span> <span className="font-bold text-slate-700 dark:text-slate-200">{selectedLog.store}</span></p>
-                <p><span className="text-slate-400">Module:</span> <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{selectedLog.module}</span></p>
-              </div>
-
-              <div className="space-y-1">
-                <p className="font-bold text-slate-800 dark:text-slate-100 mb-1">Trace Audit Context</p>
-                <p><span className="text-slate-400">Timestamp:</span> <span className="font-mono text-slate-600 dark:text-slate-300">{selectedLog.timestamp}</span></p>
-                <p><span className="text-slate-400">IP Address:</span> <code className="font-mono text-slate-600 dark:text-slate-300">{selectedLog.ip || '127.0.0.1'}</code></p>
-                <p><span className="text-slate-400">User Context:</span> <code className="font-mono text-slate-600 dark:text-slate-300">{selectedLog.userId || 'system'}</code></p>
-              </div>
+            <div>
+              <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Technical Payload & Stack Details</p>
+              <pre className="p-3 bg-slate-950 text-slate-200 rounded-lg font-mono text-2xs overflow-x-auto whitespace-pre-wrap">
+                {selectedLog.details || 'No detailed stack trace recorded for this telemetry event.'}
+              </pre>
             </div>
           </div>
         )}

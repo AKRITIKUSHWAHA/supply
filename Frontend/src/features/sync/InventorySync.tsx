@@ -21,22 +21,29 @@ export interface InventoryItem {
   updatedAt: string
 }
 
-const INITIAL_ITEMS: InventoryItem[] = [
-  { id: 'inv1', name: 'AMD Ryzen 9 7950X Processor 16-Core', sku: 'CPU-AMD-7950X', supplier: 'TechParts International', supplierStock: 450, buffer: 5, storefrontStock: 445, syncStatus: 'Synced', lastSync: '4 min ago', updatedAt: '2026-07-27 16:20' },
-  { id: 'inv2', name: 'NVIDIA GeForce RTX 4090 24GB OC', sku: 'GPU-NV-4090', supplier: 'TechParts International', supplierStock: 18, buffer: 3, storefrontStock: 12, syncStatus: 'Out of Sync', lastSync: '12 min ago', updatedAt: '2026-07-27 16:10' },
-  { id: 'inv3', name: 'DDR5 32GB 6000MHz RGB Memory Kit', sku: 'RAM-DDR5-001', supplier: 'TechParts International', supplierStock: 325, buffer: 5, storefrontStock: 320, syncStatus: 'Synced', lastSync: '18 min ago', updatedAt: '2026-07-27 16:00' },
-  { id: 'inv4', name: 'Samsung 990 Pro 2TB NVMe PCIe 4.0 SSD', sku: 'SSD-990P-2TB', supplier: 'GlobalSource Limited', supplierStock: 195, buffer: 5, storefrontStock: 180, syncStatus: 'Pending Push', lastSync: '28 min ago', updatedAt: '2026-07-27 15:50' },
-  { id: 'inv5', name: 'Corsair RM1000x 1000W 80+ Gold Modular PSU', sku: 'PSU-COR-1000W', supplier: 'GlobalSource Limited', supplierStock: 0, buffer: 2, storefrontStock: 0, syncStatus: 'Synced', lastSync: '1 hr ago', updatedAt: '2026-07-27 15:00' },
-  { id: 'inv6', name: 'ASUS ROG Swift 27" 1440P 240Hz Gaming Monitor', sku: 'MON-ASUS-27', supplier: 'PrimeSupply Corp', supplierStock: 82, buffer: 2, storefrontStock: 80, syncStatus: 'Synced', lastSync: '2 hr ago', updatedAt: '2026-07-27 14:00' },
-  { id: 'inv7', name: 'Logitech MX Master 3S Wireless Mouse', sku: 'MOUSE-MX3S', supplier: 'Acme Distributors', supplierStock: 120, buffer: 5, storefrontStock: 90, syncStatus: 'Error', lastSync: '3 hr ago', updatedAt: '2026-07-27 13:00' },
-  { id: 'inv8', name: 'Keychron Q1 Pro Wireless Mechanical Keyboard', sku: 'KEY-Q1PRO', supplier: 'QuickShip LLC', supplierStock: 64, buffer: 2, storefrontStock: 62, syncStatus: 'Synced', lastSync: '5 min ago', updatedAt: '2026-07-27 16:22' },
-]
+const INITIAL_ITEMS: InventoryItem[] = []
 
 export const InventorySync: React.FC = () => {
   const [items, setItems] = useState<InventoryItem[]>(INITIAL_ITEMS)
   const [syncingAll, setSyncingAll] = useState(false)
   const [syncingItemId, setSyncingItemId] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const fetchInventory = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/sync/inventory')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch inventory sync:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchInventory()
+  }, [])
 
   // Filters & Searches
   const [search, setSearch] = useState('')
