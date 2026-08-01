@@ -64,12 +64,14 @@ export const Categories: React.FC = () => {
   }
 
   const handleCreateCategory = async () => {
-    if (!formData.name || !formData.slug) return
+    const name = formData.name.trim();
+    if (!name) return;
+    const slug = formData.slug.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     try {
       const res = await fetch('http://localhost:5000/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, name, slug })
       });
       if (res.ok) {
         await fetchCategories();
@@ -93,12 +95,14 @@ export const Categories: React.FC = () => {
     setEditOpen(true)
   }
   const handleEditCategory = async () => {
-    if (!editingCategory || !formData.name || !formData.slug) return
+    const name = formData.name.trim();
+    if (!editingCategory || !name) return;
+    const slug = formData.slug.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     try {
       const res = await fetch(`http://localhost:5000/api/categories/${editingCategory.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, name, slug })
       });
       if (res.ok) {
         await fetchCategories();

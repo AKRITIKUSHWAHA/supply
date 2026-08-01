@@ -5,17 +5,11 @@ const prisma = new PrismaClient();
 
 export const getVariants = async (req: Request, res: Response) => {
   try {
-    // For this mock representation, we'll return dynamic groups based on Variants
-    // In a real scenario, VariantTypes would be a separate table.
-    // We will just return some static data or grouped data if needed.
-    // But since we need to persist, we can store it in dynamicOptions or just return empty for now if not supported.
-    
-    // To support the UI's CRUD operations without breaking the schema, we'll use a hack to store them as "Variant" rows 
-    // where dynamicOptions holds the values array.
     const rawVariants = await prisma.variant.findMany({
       where: {
         sku: { startsWith: 'VARTYPE_' }
-      }
+      },
+      orderBy: { createdAt: 'desc' }
     });
 
     const data = rawVariants.map(v => ({
@@ -23,7 +17,7 @@ export const getVariants = async (req: Request, res: Response) => {
       name: v.color || 'Unnamed',
       values: v.dynamicOptions ? JSON.parse(v.dynamicOptions) : [],
       productCount: 0,
-      createdAt: new Date().toISOString()
+      createdAt: v.createdAt.toISOString()
     }));
 
     res.json(data);
@@ -35,17 +29,40 @@ export const getVariants = async (req: Request, res: Response) => {
 export const createVariant = async (req: Request, res: Response) => {
   try {
     const { name, values } = req.body;
-    // We mock the VariantType as a Variant model for now
-    // productId is required, so we just link to a dummy or fail. 
-    // Wait, productId is required! We can't just create a variant without a product.
-    // Instead, we will just return a success for now because the schema doesn't match VariantType perfectly.
-    
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    // Ensure a dummy system product exists to satisfy the foreign key constraint
+    let systemProduct = await prisma.product.findFirst({
+      where: { sku: 'SYSTEM_VARIANTS_HOLDER' }
+    });
+
+    if (!systemProduct) {
+      systemProduct = await prisma.product.create({
+        data: {
+          sku: 'SYSTEM_VARIANTS_HOLDER',
+          title: 'System Variants Holder',
+          status: 'archived'
+        }
+      });
+    }
+
+    const created = await prisma.variant.create({
+      data: {
+        productId: systemProduct.id,
+        sku: `VARTYPE_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        color: name,
+        dynamicOptions: JSON.stringify(values || [])
+      }
+    });
+
     res.status(201).json({
-      id: 'mock_id_' + Date.now(),
-      name,
-      values,
+      id: created.id,
+      name: created.color,
+      values: created.dynamicOptions ? JSON.parse(created.dynamicOptions) : [],
       productCount: 0,
-      createdAt: new Date().toISOString()
+      createdAt: created.createdAt.toISOString()
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to create Variant' });
@@ -56,7 +73,21 @@ export const updateVariant = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, values } = req.body;
-    res.json({ id, name, values, productCount: 0 });
+
+    const updated = await prisma.variant.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { color: name }),
+        ...(values !== undefined && { dynamicOptions: JSON.stringify(values) })
+      }
+    });
+
+    res.json({
+      id: updated.id,
+      name: updated.color,
+      values: updated.dynamicOptions ? JSON.parse(updated.dynamicOptions) : [],
+      productCount: 0
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to update Variant' });
   }
@@ -64,8 +95,13 @@ export const updateVariant = async (req: Request, res: Response) => {
 
 export const deleteVariant = async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
+    await prisma.variant.delete({
+      where: { id }
+    });
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to delete Variant' });
   }
 };
+
