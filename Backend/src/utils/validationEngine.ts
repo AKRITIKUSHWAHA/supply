@@ -98,14 +98,18 @@ export async function runProductValidation(productId: string, prisma: PrismaClie
 
     // ── 8. Persist all found issues into ValidationLog ──────────────────
     if (issues.length > 0) {
-      await prisma.validationLog.createMany({
-        data: issues.map(({ issue, errorType }) => ({
-          entityId: productId,
-          entityType: 'Product',
-          issue: `[${errorType}] ${issue}`,
-          status: 'open',
-        })),
-      });
+      for (const { issue, errorType } of issues) {
+        try {
+          await prisma.validationLog.create({
+            data: {
+              entityId: productId,
+              entityType: 'Product',
+              issue: `[${errorType}] ${issue}`,
+              status: 'open',
+            },
+          });
+        } catch (e) {}
+      }
     }
   } catch (err) {
     // Non-fatal — validation failures should never break the main product save

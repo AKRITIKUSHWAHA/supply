@@ -10,13 +10,11 @@ export const getReportsData = async (req: Request, res: Response) => {
     });
 
     if (suppliers.length === 0) {
-      await prisma.supplier.createMany({
-        data: [
-          { name: 'TechParts International', company: 'TechParts Inc', email: 'api@techparts.com', status: 'active' },
-          { name: 'GlobalSource Ltd.', company: 'GlobalSource Ltd', email: 'feed@globalsource.com', status: 'active' },
-          { name: 'PrimeSupply Corp', company: 'PrimeSupply Corp', email: 'sales@primesupply.com', status: 'active' },
-        ]
-      });
+      try {
+        await prisma.supplier.create({ data: { name: 'TechParts International', company: 'TechParts Inc', email: 'api@techparts.com', status: 'active' } });
+        await prisma.supplier.create({ data: { name: 'GlobalSource Ltd.', company: 'GlobalSource Ltd', email: 'feed@globalsource.com', status: 'active' } });
+        await prisma.supplier.create({ data: { name: 'PrimeSupply Corp', company: 'PrimeSupply Corp', email: 'sales@primesupply.com', status: 'active' } });
+      } catch (e) { /* ignore duplicate seed */ }
       suppliers = await prisma.supplier.findMany({
         include: { products: true, connections: true }
       });
@@ -37,14 +35,12 @@ export const getReportsData = async (req: Request, res: Response) => {
     });
 
     if (categories.length === 0) {
-      await prisma.category.createMany({
-        data: [
-          { name: 'Processors (CPUs)', slug: 'processors-cpus' },
-          { name: 'Graphics Cards (GPUs)', slug: 'graphics-cards-gpus' },
-          { name: 'Memory & Storage', slug: 'memory-storage' },
-          { name: 'Components & Cooling', slug: 'components-cooling' },
-        ]
-      });
+      try {
+        await prisma.category.create({ data: { name: 'Processors (CPUs)', slug: 'processors-cpus' } });
+        await prisma.category.create({ data: { name: 'Graphics Cards (GPUs)', slug: 'graphics-cards-gpus' } });
+        await prisma.category.create({ data: { name: 'Memory & Storage', slug: 'memory-storage' } });
+        await prisma.category.create({ data: { name: 'Components & Cooling', slug: 'components-cooling' } });
+      } catch (e) { /* ignore duplicate seed */ }
       categories = await prisma.category.findMany({
         include: { products: true }
       });
