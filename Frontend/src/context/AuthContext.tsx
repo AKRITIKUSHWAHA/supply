@@ -120,7 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const perms = permissionsConfig[role] || DEFAULT_ROLE_PERMISSIONS[role] || ['*']
-    if (!perms || perms.length === 0) return true
+    if (!perms) return false
+    if (perms.length === 0) return false // Empty permissions means NO access
 
     return perms.includes('*') || perms.includes(moduleKey)
   }
@@ -137,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleRoleSelect = (preset: typeof ROLE_PRESETS[0]) => {
     setSelectedRole(preset.role)
     setEmail(preset.email)
-    setPassword('••••••••••••')
+    setPassword('admin123')
   }
 
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -154,6 +155,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.status === 'success') {
         const userRole = data.data.user.role.toLowerCase().replace(' ', '_') as UserRole;
         setRole(userRole);
+        
+        // Save the permissions fetched from backend for this specific role
+        if (data.data.user.permissions) {
+          setPermissionsConfig(prev => {
+            const nextConfig = { ...prev, [userRole]: data.data.user.permissions }
+            localStorage.setItem('supplybridge_permissions_config', JSON.stringify(nextConfig))
+            return nextConfig
+          });
+        }
+
         localStorage.setItem('supplybridge_is_logged_out', 'false');
         localStorage.setItem('supplybridge_token', data.accessToken);
         setIsLoggedOutState(false);

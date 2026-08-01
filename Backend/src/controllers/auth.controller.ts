@@ -51,7 +51,15 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { role: true },
+      include: { 
+        role: {
+          include: {
+            permissions: {
+              include: { permission: true }
+            }
+          }
+        } 
+      },
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -106,6 +114,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
           name: user.name,
           email: user.email,
           role: user.role.name,
+          permissions: user.role.permissions ? user.role.permissions.map(rp => rp.permission.name) : [],
         },
       },
     });

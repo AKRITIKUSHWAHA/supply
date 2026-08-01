@@ -353,5 +353,6 @@ export interface DashboardWidgetSetting {
   visible: boolean
   order: number
   size: WidgetSize
+  module?: string
 }
 

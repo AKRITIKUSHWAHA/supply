@@ -8,10 +8,31 @@ import { mockRoles } from '../../data/mockData'
 import type { Role } from '../../types'
 
 const ALL_MODULES = [
-  'Dashboard', 'Suppliers', 'Integrations', 'Master Catalog', 'Categories', 'Brands',
-  'Manufacturers', 'Variants', 'Media Library', 'Data Mapping', 'Validation', 'Inventory Sync',
-  'Pricing Sync', 'Image Sync', 'Store Management', 'Store Synchronization', 'Queue Management',
-  'Logs', 'Monitoring', 'Reports', 'Users', 'Roles', 'Permissions', 'Settings'
+  { label: 'Dashboard', key: 'dashboard' },
+  { label: 'Suppliers', key: 'suppliers' },
+  { label: 'Integrations', key: 'integrations' },
+  { label: 'Master Catalog', key: 'catalog' },
+  { label: 'Products', key: 'products' },
+  { label: 'Categories', key: 'categories' },
+  { label: 'Brands', key: 'brands' },
+  { label: 'Manufacturers', key: 'manufacturers' },
+  { label: 'Variants', key: 'variants' },
+  { label: 'Media Library', key: 'media' },
+  { label: 'Data Mapping', key: 'mapping' },
+  { label: 'Validation', key: 'validation' },
+  { label: 'Inventory Sync', key: 'inventory_sync' },
+  { label: 'Pricing Sync', key: 'pricing_sync' },
+  { label: 'Image Sync', key: 'image_sync' },
+  { label: 'Store Management', key: 'store_management' },
+  { label: 'Store Synchronization', key: 'website_sync' },
+  { label: 'Queue Management', key: 'sync_jobs' },
+  { label: 'Logs', key: 'logs' },
+  { label: 'Monitoring', key: 'monitoring' },
+  { label: 'Reports', key: 'reports' },
+  { label: 'Users', key: 'users' },
+  { label: 'Roles', key: 'roles' },
+  { label: 'Permissions', key: 'permissions' },
+  { label: 'Settings', key: 'settings' }
 ]
 
 const DEPARTMENTS = [
@@ -116,27 +137,34 @@ export const Roles: React.FC = () => {
     showNotification(`Enterprise Role "${newRole.name}" created with MFA & Scope policies!`)
   }
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedRole || !formName.trim()) return
 
-    setRolesList(prev =>
-      prev.map(r => {
-        if (r.id === selectedRole.id) {
-          return {
-            ...r,
-            name: formName.trim(),
-            description: formDesc.trim(),
-            permissions: formPerms,
-          }
-        }
-        return r
-      })
-    )
-
-    setEditOpen(false)
-    setSelectedRole(null)
-    showNotification(`Enterprise Role "${formName}" updated successfully!`)
+    try {
+      const res = await fetch(`http://localhost:5000/api/roles/${selectedRole.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formName.trim(),
+          permissions: formPerms
+        })
+      });
+      
+      if (res.ok) {
+        // Refresh the roles list from backend to get updated data
+        await fetchRoles();
+        
+        setEditOpen(false)
+        setSelectedRole(null)
+        showNotification(`Enterprise Role "${formName}" updated successfully!`)
+      } else {
+        showNotification('Failed to update role in backend')
+      }
+    } catch (err) {
+      console.error(err)
+      showNotification('Error connecting to backend')
+    }
   }
 
   const handleDeleteRole = () => {
@@ -320,7 +348,7 @@ export const Roles: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setFormPerms(ALL_MODULES.map(m => m.toLowerCase().replace(/ /g, '_')))}
+                  onClick={() => setFormPerms(ALL_MODULES.map(m => m.key))}
                   className="text-2xs font-bold text-primary-600 hover:underline"
                 >
                   Select All
@@ -338,17 +366,17 @@ export const Roles: React.FC = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 max-h-56 overflow-y-auto scrollbar-hide">
               {ALL_MODULES.map(m => {
-                const key = m.toLowerCase().replace(/ /g, '_')
+                const key = m.key
                 const isChecked = formPerms.includes('*') || formPerms.includes(key)
                 return (
-                  <label key={m} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 select-none p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <label key={m.key} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 select-none p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => togglePerm(key)}
                       className="rounded border-slate-300 text-primary-600 focus:ring-primary-500/20"
                     />
-                    <span>{m}</span>
+                    <span>{m.label}</span>
                   </label>
                 )
               })}
@@ -412,17 +440,17 @@ export const Roles: React.FC = () => {
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">Module Access Permissions</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 max-h-56 overflow-y-auto scrollbar-hide">
                 {ALL_MODULES.map(m => {
-                  const key = m.toLowerCase().replace(/ /g, '_')
+                  const key = m.key
                   const isChecked = formPerms.includes('*') || formPerms.includes(key)
                   return (
-                    <label key={m} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 select-none p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <label key={m.key} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300 select-none p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => togglePerm(key)}
                         className="rounded border-slate-300 text-primary-600 focus:ring-primary-500/20"
                       />
-                      <span>{m}</span>
+                      <span>{m.label}</span>
                     </label>
                   )
                 })}

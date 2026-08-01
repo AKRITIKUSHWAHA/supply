@@ -23,19 +23,19 @@ import { useSuppliers } from '../../context/SupplierContext'
 import type { UserRole, DashboardWidgetSetting, WidgetSize } from '../../types'
 
 const DEFAULT_WIDGET_SETTINGS: DashboardWidgetSetting[] = [
-  { id: 'connected', label: 'Connected Suppliers', visible: true, order: 0, size: 'sm' },
-  { id: 'disconnected', label: 'Disconnected Suppliers', visible: true, order: 1, size: 'sm' },
-  { id: 'total-products', label: 'Total Products', visible: true, order: 2, size: 'sm' },
-  { id: 'imported-today', label: 'Products Imported Today', visible: true, order: 3, size: 'sm' },
-  { id: 'ready-publish', label: 'Products Ready to Publish', visible: true, order: 4, size: 'sm' },
-  { id: 'pending-validation', label: 'Pending Validation', visible: true, order: 5, size: 'sm' },
-  { id: 'published-products', label: 'Published Products', visible: true, order: 6, size: 'sm' },
-  { id: 'awaiting-review', label: 'Products Awaiting Review', visible: true, order: 7, size: 'sm' },
-  { id: 'duplicate-products', label: 'Duplicate Products', visible: true, order: 8, size: 'sm' },
-  { id: 'missing-images', label: 'Missing Images', visible: true, order: 9, size: 'sm' },
-  { id: 'missing-categories', label: 'Missing Categories', visible: true, order: 10, size: 'sm' },
-  { id: 'missing-pricing', label: 'Missing Pricing', visible: true, order: 11, size: 'sm' },
-  { id: 'failed-products', label: 'Failed Products', visible: true, order: 12, size: 'sm' },
+  { id: 'connected', label: 'Connected Suppliers', visible: true, order: 0, size: 'sm', module: 'suppliers' },
+  { id: 'disconnected', label: 'Disconnected Suppliers', visible: true, order: 1, size: 'sm', module: 'suppliers' },
+  { id: 'total-products', label: 'Total Products', visible: true, order: 2, size: 'sm', module: 'catalog' },
+  { id: 'imported-today', label: 'Products Imported Today', visible: true, order: 3, size: 'sm', module: 'catalog' },
+  { id: 'ready-publish', label: 'Products Ready to Publish', visible: true, order: 4, size: 'sm', module: 'catalog' },
+  { id: 'pending-validation', label: 'Pending Validation', visible: true, order: 5, size: 'sm', module: 'validation' },
+  { id: 'published-products', label: 'Published Products', visible: true, order: 6, size: 'sm', module: 'catalog' },
+  { id: 'awaiting-review', label: 'Products Awaiting Review', visible: true, order: 7, size: 'sm', module: 'validation' },
+  { id: 'duplicate-products', label: 'Duplicate Products', visible: true, order: 8, size: 'sm', module: 'validation' },
+  { id: 'missing-images', label: 'Missing Images', visible: true, order: 9, size: 'sm', module: 'media' },
+  { id: 'missing-categories', label: 'Missing Categories', visible: true, order: 10, size: 'sm', module: 'categories' },
+  { id: 'missing-pricing', label: 'Missing Pricing', visible: true, order: 11, size: 'sm', module: 'pricing_sync' },
+  { id: 'failed-products', label: 'Failed Products', visible: true, order: 12, size: 'sm', module: 'catalog' },
 ]
 
 const getStorageKey = (userId: string) => `supplybridge_widgets_${userId}`
@@ -108,7 +108,7 @@ const stagger = {
 }
 
 export const Dashboard: React.FC = () => {
-  const { role, currentUser } = useAuth()
+  const { role, currentUser, hasPermission } = useAuth()
   const { suppliersList } = useSuppliers()
   const roleInfo = ROLE_DESCRIPTIONS[role] || ROLE_DESCRIPTIONS.platform_owner
 
@@ -167,36 +167,7 @@ export const Dashboard: React.FC = () => {
   }
 
   useEffect(() => {
-<<<<<<< HEAD
     loadStats()
-=======
-    setIsRefreshing(true)
-    fetch('http://localhost:5000/api/dashboard/stats')
-      .then(res => res.json())
-      .then(data => {
-        setM(prev => ({
-          ...prev,
-          totalProducts: data.totalProducts ?? 0,
-          totalSuppliers: data.totalSuppliers ?? 0,
-          connectedSuppliers: data.connectedSuppliers ?? 0,
-          disconnectedSuppliers: data.disconnectedSuppliers ?? 0,
-          publishedProducts: data.publishedProducts ?? 0,
-          missingImages: data.missingImages ?? 0,
-          missingCategories: data.missingCategories ?? 0,
-          missingPricing: data.missingPricing ?? 0,
-          duplicateProducts: data.duplicateProducts ?? 0,
-          productsImportedToday: data.productsImportedToday ?? 0,
-          productsReadyToPublish: data.productsReadyToPublish ?? 0,
-          runningJobs: data.runningJobs ?? 0,
-          completedJobs: data.completedJobs ?? 0,
-          failedJobs: data.failedJobs ?? 0,
-          totalStores: data.totalStores ?? 0,
-        }))
-        setLastUpdated('Updated just now (Live)')
-      })
-      .catch(err => console.error('Failed to load live metrics:', err))
-      .finally(() => setIsRefreshing(false))
->>>>>>> 7497aa3f10b6af8c7ab7155f82581a179b0b0324
   }, [])
 
   // Per-User Custom Cards & Widget Layout State
@@ -443,8 +414,9 @@ export const Dashboard: React.FC = () => {
   const activeUserWidgets = useMemo(() => {
     return widgetSettings
       .filter(w => w.visible)
+      .filter(w => !w.module || hasPermission(w.module))
       .sort((a, b) => a.order - b.order)
-  }, [widgetSettings])
+  }, [widgetSettings, hasPermission])
 
   return (
     <div className="relative space-y-6">
