@@ -956,3 +956,4 @@ const SupplierDetail: React.FC<{
     </Modal>
   )
 }
+
