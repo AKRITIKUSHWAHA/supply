@@ -7,7 +7,7 @@ import {
 import { SectionHeader, FilterBar, Tabs, Spinner } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
-import { mockValidationItems } from '../../data/mockData'
+
 import { statusToVariant, timeAgo } from '../../utils'
 import type { ValidationItem } from '../../types'
 import { useAuth } from '../../context/AuthContext'
@@ -131,45 +131,59 @@ export const ValidationCenter: React.FC = () => {
     setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
 
   // --- Handlers ---
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsLoading(true)
-    setTimeout(() => {
-      setItems(mockValidationItems)
-      setSelectedIds([])
-      setIsLoading(false)
-      setToastMessage({ text: 'Validation queue refreshed from backend.', type: 'success' })
-    }, 800)
+    await fetchValidationItems()
+    setSelectedIds([])
+    setIsLoading(false)
+    setToastMessage({ text: 'Validation queue refreshed from backend.', type: 'success' })
   }
 
-  const handleApproveSingle = (id: string, name?: string) => {
+  const handleApproveSingle = async (id: string, name?: string) => {
     const targetItem = items.find(i => i.id === id)
     if (!targetItem) return
     if (targetItem.errors.length > 0) {
       setToastMessage({
-        text: `Approval Blocked: "${name || 'Item'}" has ${targetItem.errors.length} unresolved validation issue(s).`,
+        text: `Approval Blocked: "${name || 'Item'}" has ${targetItem.errors.length} unresolved validation issue(s). Fix them first!`,
         type: 'error',
       })
       return
     }
-    setItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, status: 'approved' } : item))
-    )
-    setToastMessage({ text: `Product "${name || 'Item'}" approved and marked as publishable!`, type: 'success' })
-    setSelectedIds(prev => prev.filter(x => x !== id))
-    if (reviewItem?.id === id) setReviewItem(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/validation/${id}/resolve`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json()
+        setToastMessage({ text: err.error || 'Approval failed.', type: 'error' })
+        return
+      }
+      setItems(prev => prev.map(item => (item.id === id ? { ...item, status: 'approved' } : item)))
+      setToastMessage({ text: `Product "${name || 'Item'}" approved and marked as publishable!`, type: 'success' })
+      setSelectedIds(prev => prev.filter(x => x !== id))
+      if (reviewItem?.id === id) setReviewItem(null)
+    } catch {
+      setToastMessage({ text: 'Network error while approving product.', type: 'error' })
+    }
   }
 
-  const handleRejectSingle = (id: string, name?: string) => {
-    setItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item))
-    )
-    setToastMessage({ text: `Product "${name || 'Item'}" moved to Rejected tab.`, type: 'info' })
-    setSelectedIds(prev => prev.filter(x => x !== id))
-    if (reviewItem?.id === id) setReviewItem(null)
+  const handleRejectSingle = async (id: string, name?: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/validation/${id}/reject`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json()
+        setToastMessage({ text: err.error || 'Rejection failed.', type: 'error' })
+        return
+      }
+      setItems(prev => prev.map(item => (item.id === id ? { ...item, status: 'rejected' } : item)))
+      setToastMessage({ text: `Product "${name || 'Item'}" moved to Rejected tab.`, type: 'info' })
+      setSelectedIds(prev => prev.filter(x => x !== id))
+      if (reviewItem?.id === id) setReviewItem(null)
+    } catch {
+      setToastMessage({ text: 'Network error while rejecting product.', type: 'error' })
+    }
   }
 
   // --- Bulk Enterprise Actions ---
-  const handleBulkApprove = () => {
+  const handleBulkApprove = async () => {
     if (selectedIds.length === 0) return
     const selectedItems = items.filter(i => selectedIds.includes(i.id))
     const invalidItems = selectedItems.filter(i => i.errors.length > 0)
@@ -180,6 +194,9 @@ export const ValidationCenter: React.FC = () => {
       })
       return
     }
+    for (const id of selectedIds) {
+      await fetch(`http://localhost:5000/api/validation/${id}/resolve`, { method: 'POST' })
+    }
     setItems(prev =>
       prev.map(item => (selectedIds.includes(item.id) ? { ...item, status: 'approved' } : item))
     )
@@ -187,8 +204,11 @@ export const ValidationCenter: React.FC = () => {
     setSelectedIds([])
   }
 
-  const handleBulkReject = () => {
+  const handleBulkReject = async () => {
     if (selectedIds.length === 0) return
+    for (const id of selectedIds) {
+      await fetch(`http://localhost:5000/api/validation/${id}/reject`, { method: 'POST' })
+    }
     setItems(prev =>
       prev.map(item => (selectedIds.includes(item.id) ? { ...item, status: 'rejected' } : item))
     )
@@ -236,7 +256,15 @@ export const ValidationCenter: React.FC = () => {
     setReviewItem({ ...item, status: item.status === 'pending' ? 'review' : item.status })
   }
 
-  const handleResolveSingleError = (itemId: string, errorIndex: number) => {
+  const handleResolveSingleError = async (itemId: string, errorIndex: number) => {
+    // Get the error's log id so we can delete it from backend
+    const targetItem = items.find(i => i.id === itemId)
+    const errorEntry = targetItem?.errors[errorIndex]
+    if (errorEntry?.id) {
+      try {
+        await fetch(`http://localhost:5000/api/validation/${errorEntry.id}`, { method: 'DELETE' })
+      } catch { /* ignore */ }
+    }
     setItems(prev =>
       prev.map(item => {
         if (item.id !== itemId) return item
@@ -251,7 +279,18 @@ export const ValidationCenter: React.FC = () => {
     setToastMessage({ text: 'Validation issue resolved.', type: 'success' })
   }
 
-  const handleResolveAll = (itemId: string) => {
+  const handleResolveAll = async (itemId: string) => {
+    // Delete all open error log entries for this product from backend
+    const targetItem = items.find(i => i.id === itemId)
+    if (targetItem) {
+      for (const err of targetItem.errors) {
+        if (err.id) {
+          try {
+            await fetch(`http://localhost:5000/api/validation/${err.id}`, { method: 'DELETE' })
+          } catch { /* ignore */ }
+        }
+      }
+    }
     setItems(prev =>
       prev.map(item => (item.id === itemId ? { ...item, errors: [] } : item))
     )

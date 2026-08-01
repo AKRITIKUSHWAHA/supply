@@ -70,6 +70,7 @@ export const MasterCatalog: React.FC = () => {
     retailPrice: 99.99,
     costPrice: 65.0,
     stock: 50,
+    imageUrl: '',
     metaTitle: '',
     metaDescription: '',
     focusKeyword: '',
@@ -203,6 +204,7 @@ export const MasterCatalog: React.FC = () => {
           brand: newProduct.brand,
           categoryName: newProduct.categoryName,
           supplierName: newProduct.supplierName,
+          imageUrl: newProduct.imageUrl || undefined,
           pricing: {
             retailPrice: newProduct.retailPrice,
             costPrice: newProduct.costPrice,
@@ -235,6 +237,7 @@ export const MasterCatalog: React.FC = () => {
         retailPrice: 99.99,
         costPrice: 65.0,
         stock: 50,
+        imageUrl: '',
         metaTitle: '',
         metaDescription: '',
         focusKeyword: '',
@@ -258,6 +261,7 @@ export const MasterCatalog: React.FC = () => {
       retailPrice: p.pricing.retailPrice,
       costPrice: p.pricing.costPrice,
       stock: p.inventory.availableStock,
+      imageUrl: p.images?.[0]?.url || '',
       metaTitle: p.seo?.metaTitle || '',
       metaDescription: p.seo?.metaDescription || '',
       focusKeyword: p.seo?.focusKeyword || '',
@@ -830,6 +834,33 @@ export const MasterCatalog: React.FC = () => {
             </div>
           </div>
 
+          
+          {/* Product Image URL */}
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1.5">Product Image URL</label>
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <input
+                  className="input"
+                  placeholder="https://example.com/product-image.jpg"
+                  value={newProduct.imageUrl}
+                  onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
+                />
+                <p className="text-2xs text-slate-400 mt-1">
+                  Paste a direct image link. Leave blank if unavailable - it will appear as a validation issue in Validation Center.
+                </p>
+              </div>
+              {newProduct.imageUrl && (
+                <img
+                  src={newProduct.imageUrl}
+                  alt="Preview"
+                  className="w-12 h-12 rounded-lg object-cover border border-slate-200 flex-shrink-0 mt-0.5"
+                  onError={e => { e.target.style.display = 'none' }}
+                />
+              )}
+            </div>
+          </div>
+
           <div className="border-t border-slate-200 pt-4 mt-2">
             <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">SEO & Metadata</h5>
             <div className="grid grid-cols-2 gap-4">
@@ -1090,3 +1121,7 @@ export const MasterCatalog: React.FC = () => {
     </div>
   )
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8a9720bb2934046efc132fcd05063e7976336f95

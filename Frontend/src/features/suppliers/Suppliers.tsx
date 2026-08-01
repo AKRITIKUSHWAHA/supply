@@ -956,3 +956,7 @@ const SupplierDetail: React.FC<{
     </Modal>
   )
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8a9720bb2934046efc132fcd05063e7976336f95
