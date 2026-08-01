@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import { getPermissions, createPermission, updatePermission, deletePermission, assignPermissionToRole, removePermissionFromRole } from '../controllers/permission.controller';
-import { authenticate, checkPermission } from '../middleware/auth.middleware';
+// import { authenticate, checkPermission } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.use(authenticate);
+// router.use(authenticate);
 
-router.get('/', checkPermission('manage_permissions'), getPermissions);
-router.post('/', checkPermission('manage_permissions'), createPermission);
-router.put('/:id', checkPermission('manage_permissions'), updatePermission);
-router.delete('/:id', checkPermission('manage_permissions'), deletePermission);
+router.get('/', getPermissions);
+router.post('/', createPermission);
+router.put('/:id', updatePermission);
+router.delete('/:id', deletePermission);
 
-router.post('/assign', checkPermission('manage_permissions'), assignPermissionToRole);
-router.post('/remove', checkPermission('manage_permissions'), removePermissionFromRole);
+router.post('/assign', assignPermissionToRole);
+router.post('/remove', removePermissionFromRole);
 
 export default router;

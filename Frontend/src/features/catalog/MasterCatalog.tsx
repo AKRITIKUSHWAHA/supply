@@ -174,91 +174,76 @@ export const MasterCatalog: React.FC = () => {
   }
 
   // --- Single Actions ---
-  const handleSingleDelete = (id: string, name: string) => {
-    setProductsList(prev => prev.filter(p => p.id !== id))
-    showNotification(`Product "${name}" deleted.`)
+  const handleSingleDelete = async (id: string, name: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/products/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      setProductsList(prev => prev.filter(p => p.id !== id))
+      showNotification(`Product "${name}" deleted.`)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to delete product')
+    }
   }
 
   // --- Create Product ---
-  const handleCreateProduct = () => {
+  const handleCreateProduct = async () => {
     if (!newProduct.name.trim() || !newProduct.sku.trim()) {
       alert('Please fill out Name and SKU.')
       return
     }
 
-    const created: Product = {
-      id: `p_${Date.now()}`,
-      masterId: `MSTR-${newProduct.sku.toUpperCase()}`,
-      masterSku: newProduct.sku.toUpperCase(),
-      supplierSku: newProduct.sku.toUpperCase(),
-      sku: newProduct.sku.toUpperCase(),
-      name: newProduct.name,
-      brand: newProduct.brand || 'Generic',
-      categoryName: newProduct.categoryName || 'General',
-      supplierId: 's1',
-      supplierName: newProduct.supplierName,
-      pricing: {
-        supplierPrice: Number(newProduct.costPrice),
-        costPrice: Number(newProduct.costPrice),
-        wholesalePrice: Number(newProduct.costPrice) * 1.2,
-        retailPrice: Number(newProduct.retailPrice),
-        mapPrice: Number(newProduct.retailPrice),
-        currency: 'USD',
-        margin:
-          ((Number(newProduct.retailPrice) - Number(newProduct.costPrice)) /
-            Number(newProduct.retailPrice)) *
-          100,
-        lastUpdated: new Date().toISOString(),
-      },
-      inventory: {
-        supplierStock: Number(newProduct.stock),
-        warehouseStock: Number(newProduct.stock),
-        totalStock: Number(newProduct.stock),
-        availableStock: Number(newProduct.stock),
-        reservedStock: 0,
-        lowStockThreshold: 10,
-        status: Number(newProduct.stock) > 0 ? 'in_stock' : 'out_of_stock',
-        lastSynced: new Date().toISOString(),
-      },
-      seo: {
-        metaTitle: newProduct.metaTitle,
-        metaDescription: newProduct.metaDescription,
-        focusKeyword: newProduct.focusKeyword,
-      },
-      status: 'published',
-      validationStatus: 'passed',
-      images: [
-        {
-          id: 'img1',
-          url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=150&auto=format&fit=crop&q=80',
-          isPrimary: true,
-          syncStatus: 'synced',
-          position: 0,
-        },
-      ],
-      attributes: [],
-      variants: [],
-      stores: ['store1'],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
+    try {
+      const res = await fetch('http://localhost:5000/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newProduct.name,
+          sku: newProduct.sku,
+          brand: newProduct.brand,
+          categoryName: newProduct.categoryName,
+          supplierName: newProduct.supplierName,
+          pricing: {
+            retailPrice: newProduct.retailPrice,
+            costPrice: newProduct.costPrice,
+          },
+          inventory: {
+            totalStock: newProduct.stock,
+          },
+          seo: {
+            metaTitle: newProduct.metaTitle,
+            metaDescription: newProduct.metaDescription,
+            focusKeyword: newProduct.focusKeyword,
+          }
+        })
+      })
 
-    setProductsList([created, ...productsList])
-    setAddModalOpen(false)
-    setNewProduct({
-      name: '',
-      sku: '',
-      brand: '',
-      categoryName: '',
-      supplierName: 'TechParts International',
-      retailPrice: 99.99,
-      costPrice: 65.0,
-      stock: 50,
-      metaTitle: '',
-      metaDescription: '',
-      focusKeyword: '',
-    })
-    showNotification(`Product "${created.name}" created successfully!`)
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to create product')
+      }
+
+      const created = await res.json()
+      setProductsList([created, ...productsList])
+      setAddModalOpen(false)
+      setNewProduct({
+        name: '',
+        sku: '',
+        brand: '',
+        categoryName: '',
+        supplierName: 'TechParts International',
+        retailPrice: 99.99,
+        costPrice: 65.0,
+        stock: 50,
+        metaTitle: '',
+        metaDescription: '',
+        focusKeyword: '',
+      })
+      showNotification(`Product "${created.name}" created successfully!`)
+    } catch (err: any) {
+      console.error(err)
+      alert(err.message || 'Failed to create product')
+    }
   }
 
   // --- Save Edit Product ---
@@ -280,45 +265,48 @@ export const MasterCatalog: React.FC = () => {
     setEditModalOpen(true)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingProduct) return
-    setProductsList(prev =>
-      prev.map(p => {
-        if (p.id === editingProduct.id) {
-          const ret = Number(newProduct.retailPrice)
-          const cost = Number(newProduct.costPrice)
-          return {
-            ...p,
-            name: newSupplierVal(newProduct.name, p.name),
-            sku: newProduct.sku.toUpperCase(),
-            brand: newProduct.brand,
-            categoryName: newProduct.categoryName,
-            pricing: {
-              ...p.pricing,
-              retailPrice: ret,
-              costPrice: cost,
-              margin: ((ret - cost) / ret) * 100,
-            },
-            inventory: {
-              ...p.inventory,
-              availableStock: Number(newProduct.stock),
-              totalStock: Number(newProduct.stock),
-              status: Number(newProduct.stock) > 0 ? 'in_stock' : 'out_of_stock',
-            },
-            seo: {
-              metaTitle: newProduct.metaTitle,
-              metaDescription: newProduct.metaDescription,
-              focusKeyword: newProduct.focusKeyword,
-            },
-            updatedAt: new Date().toISOString(),
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/products/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newProduct.name,
+          sku: newProduct.sku,
+          brand: newProduct.brand,
+          categoryName: newProduct.categoryName,
+          supplierName: newProduct.supplierName,
+          pricing: {
+            retailPrice: newProduct.retailPrice,
+            costPrice: newProduct.costPrice,
+          },
+          inventory: {
+            availableStock: newProduct.stock,
+          },
+          seo: {
+            metaTitle: newProduct.metaTitle,
+            metaDescription: newProduct.metaDescription,
+            focusKeyword: newProduct.focusKeyword,
           }
-        }
-        return p
+        })
       })
-    )
-    setEditModalOpen(false)
-    setEditingProduct(null)
-    showNotification(`Product "${newProduct.name}" updated successfully!`)
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to update product')
+      }
+
+      const updated = await res.json()
+      setProductsList(prev => prev.map(p => p.id === editingProduct.id ? updated : p))
+      setEditModalOpen(false)
+      setEditingProduct(null)
+      showNotification(`Product "${updated.name}" updated successfully!`)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to update product')
+    }
   }
 
   const newSupplierVal = (val: string, fallback: string) => (val.trim() ? val : fallback)
@@ -802,6 +790,7 @@ export const MasterCatalog: React.FC = () => {
                 value={newProduct.supplierName}
                 onChange={e => setNewProduct({ ...newProduct, supplierName: e.target.value })}
               >
+                <option value="">Select a Supplier...</option>
                 {suppliersList.map(s => {
                   const label = s.name ? (s.code ? `${s.name} (${s.code})` : s.name) : (s.code || 'Supplier')
                   return (
@@ -934,6 +923,7 @@ export const MasterCatalog: React.FC = () => {
                 value={newProduct.supplierName}
                 onChange={e => setNewProduct({ ...newProduct, supplierName: e.target.value })}
               >
+                <option value="">Select a Supplier...</option>
                 {suppliersList.map(s => {
                   const label = s.name ? (s.code ? `${s.name} (${s.code})` : s.name) : (s.code || 'Supplier')
                   return (
@@ -1098,13 +1088,5 @@ export const MasterCatalog: React.FC = () => {
         </Modal>
       )}
     </div>
-  )
-}
-              </div >
-            </div >
-          </div >
-        </Modal >
-      )}
-    </div >
   )
 }

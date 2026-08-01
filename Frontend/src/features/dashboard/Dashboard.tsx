@@ -132,36 +132,48 @@ export const Dashboard: React.FC = () => {
     return mockDashboardMetrics;
   })
 
+  const [activities, setActivities] = useState<any[]>(mockActivities)
+
+  const loadStats = () => {
+    setIsRefreshing(true)
+    fetch('http://localhost:5000/api/dashboard/stats')
+      .then(res => res.json())
+      .then(data => {
+        setM(prev => ({
+          ...prev,
+          totalProducts: data.totalProducts ?? prev.totalProducts,
+          totalSuppliers: data.totalSuppliers ?? prev.totalSuppliers,
+          connectedSuppliers: data.connectedSuppliers ?? prev.connectedSuppliers,
+          disconnectedSuppliers: data.disconnectedSuppliers ?? prev.disconnectedSuppliers,
+          publishedProducts: data.publishedProducts ?? prev.publishedProducts,
+          missingImages: data.missingImages ?? prev.missingImages,
+          missingCategories: data.missingCategories ?? prev.missingCategories,
+          missingPricing: data.missingPricing ?? prev.missingPricing,
+          duplicateProducts: data.duplicateProducts ?? prev.duplicateProducts,
+          productsImportedToday: data.productsImportedToday ?? prev.productsImportedToday,
+          productsReadyToPublish: data.productsReadyToPublish ?? prev.productsReadyToPublish,
+          runningJobs: data.runningJobs ?? prev.runningJobs,
+          completedJobs: data.completedJobs ?? prev.completedJobs,
+          failedJobs: data.failedJobs ?? prev.failedJobs,
+          totalStores: data.totalStores ?? prev.totalStores,
+        }))
+        if (data.activities && data.activities.length > 0) {
+          setActivities(data.activities.map((a: any) => ({
+            id: a.id,
+            message: `${a.user} ${a.action} ${a.target}`,
+            time: a.time,
+            color: a.type === 'success' ? 'emerald' : a.type === 'error' ? 'rose' : 'blue'
+          })))
+        }
+        setLastUpdated('Updated just now (Live)')
+      })
+      .catch(err => console.error('Failed to fetch dashboard metrics:', err))
+      .finally(() => setIsRefreshing(false))
+  }
+
   useEffect(() => {
-    if (role === 'platform_owner') {
-      setIsRefreshing(true)
-      fetch('http://localhost:5000/api/dashboard/stats')
-        .then(res => res.json())
-        .then(data => {
-          setM(prev => ({
-            ...prev,
-            totalProducts: data.totalProducts ?? prev.totalProducts,
-            totalSuppliers: data.totalSuppliers ?? prev.totalSuppliers,
-            connectedSuppliers: data.connectedSuppliers ?? prev.connectedSuppliers,
-            disconnectedSuppliers: data.disconnectedSuppliers ?? prev.disconnectedSuppliers,
-            publishedProducts: data.publishedProducts ?? prev.publishedProducts,
-            missingImages: data.missingImages ?? prev.missingImages,
-            missingCategories: data.missingCategories ?? prev.missingCategories,
-            missingPricing: data.missingPricing ?? prev.missingPricing,
-            duplicateProducts: data.duplicateProducts ?? prev.duplicateProducts,
-            productsImportedToday: data.productsImportedToday ?? prev.productsImportedToday,
-            productsReadyToPublish: data.productsReadyToPublish ?? prev.productsReadyToPublish,
-            runningJobs: data.runningJobs ?? prev.runningJobs,
-            completedJobs: data.completedJobs ?? prev.completedJobs,
-            failedJobs: data.failedJobs ?? prev.failedJobs,
-            totalStores: data.totalStores ?? prev.totalStores,
-          }))
-          setLastUpdated('Updated just now (Live)')
-        })
-        .catch(err => console.error('Failed to load live metrics:', err))
-        .finally(() => setIsRefreshing(false))
-    }
-  }, [role])
+    loadStats()
+  }, [])
 
   // Per-User Custom Cards & Widget Layout State
   const [customCards, setCustomCards] = useState<Record<string, any>>(() => {
@@ -399,7 +411,7 @@ export const Dashboard: React.FC = () => {
       }
     }
     return dict
-  }, [customCards])
+  }, [customCards, m])
 
 
 
@@ -449,7 +461,7 @@ export const Dashboard: React.FC = () => {
 
           {/* Refresh Button */}
           <button
-            onClick={handleRefresh}
+            onClick={loadStats}
             disabled={isRefreshing}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
             title="Click to refresh dashboard metrics"
@@ -629,7 +641,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="space-y-3.5">
-            {mockActivities
+            {activities
               .filter(act => {
                 const matchesSearch = act.message.toLowerCase().includes(activitySearch.toLowerCase())
                 if (activityFilter === 'All') return matchesSearch

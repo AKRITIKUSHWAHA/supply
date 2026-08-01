@@ -166,6 +166,10 @@ export const Suppliers: React.FC = () => {
           }
         })
       })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to create supplier on server')
+      }
       const created = await res.json()
       setSuppliersList(prev => [created, ...prev])
       setAddOpen(false)
@@ -228,6 +232,10 @@ export const Suppliers: React.FC = () => {
           }
         })
       })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to update supplier on server')
+      }
       const updated = await res.json()
       setSuppliersList(prev => prev.map(s => (s.id === editingSupplier.id ? updated : s)))
       setEditOpen(false)
@@ -946,16 +954,5 @@ const SupplierDetail: React.FC<{
         )
       )}
     </Modal>
-  )
-}
-              <p className="font-semibold flex items-center gap-1.5 mb-1">
-                <AlertCircle size={14} className="text-rose-600" /> Timeout on Image Download Batch
-              </p>
-              <p className="text-rose-600 font-mono text-2xs">FTP connection idle timeout after 120s. 3 items skipped.</p>
-            </div >
-          </div >
-        )
-      )}
-    </Modal >
   )
 }

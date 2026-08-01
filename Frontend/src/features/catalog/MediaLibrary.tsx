@@ -57,7 +57,7 @@ const INITIAL_ASSETS: MediaAsset[] = [
 ]
 
 export const MediaLibrary: React.FC = () => {
-  const [assets, setAssets] = useState<MediaAsset[]>(INITIAL_ASSETS)
+  const [assets, setAssets] = useState<MediaAsset[]>([])
   const [search, setSearch] = useState('')
 
   // Modals
@@ -142,7 +142,11 @@ export const MediaLibrary: React.FC = () => {
       const res = await fetch('http://localhost:5000/api/media', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: uploadForm.imageUrl, filename: uploadForm.name, folder: uploadForm.type })
+        body: JSON.stringify({
+          name: uploadForm.name,
+          imageUrl: uploadForm.imageUrl,
+          sku: uploadForm.sku || undefined,
+        })
       });
       if (res.ok) {
         await fetchMedia();
@@ -176,24 +180,28 @@ export const MediaLibrary: React.FC = () => {
     }
   }
 
-  const handleEditSave = (e: React.FormEvent) => {
+  const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingAsset) return
-    setAssets(prev =>
-      prev.map(a =>
-        a.id === editingAsset.id
-          ? {
-              ...a,
-              name: editForm.name || a.name,
-              sku: editForm.sku || a.sku,
-              status: editForm.status,
-              imageUrl: editForm.imageUrl || a.imageUrl,
-            }
-          : a
-      )
-    )
-    setEditModalOpen(false)
-    setEditingAsset(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/media/${editingAsset.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name,
+          sku: editForm.sku,
+          imageUrl: editForm.imageUrl,
+        })
+      });
+      if (res.ok) {
+        await fetchMedia();
+        setEditModalOpen(false)
+        setEditingAsset(null)
+        showNotification('Media updated successfully!')
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   const handleDelete = async (id: string) => {
