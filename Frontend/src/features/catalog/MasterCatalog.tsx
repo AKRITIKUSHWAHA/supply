@@ -1100,11 +1100,4 @@ export const MasterCatalog: React.FC = () => {
     </div>
   )
 }
-              </div >
-            </div >
-          </div >
-        </Modal >
-      )}
-    </div >
-  )
-}
+

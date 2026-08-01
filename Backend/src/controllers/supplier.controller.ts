@@ -182,6 +182,7 @@ export const syncAllSuppliers = async (req: Request, res: Response) => {
 
 export const testSupplierConnection = async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
     const supplier = await prisma.supplier.findUnique({ where: { id } });
     if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
     res.json({
