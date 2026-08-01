@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, Search, Building2, Edit3, Trash2, CheckCircle2 } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
@@ -11,16 +11,8 @@ interface Manufacturer {
   status: 'active' | 'inactive'
 }
 
-const INITIAL_MANUFACTURERS: Manufacturer[] = [
-  { id: 'm1', name: 'Bosch Automotive Global', description: 'Global automotive components & systems manufacturer', status: 'active' },
-  { id: 'm2', name: 'Denso Corporation', description: 'Thermal, powertrain, and mobility electronics', status: 'active' },
-  { id: 'm3', name: 'Magna International', description: 'Mobility technology & vehicle assembly manufacturer', status: 'active' },
-  { id: 'm4', name: 'ZF Friedrichshafen', description: 'Driveline and chassis technology supplier', status: 'inactive' },
-  { id: 'm5', name: 'Aisin Seiki Parts', description: 'Automotive systems and precision components', status: 'active' },
-]
-
 export const Manufacturers: React.FC = () => {
-  const [manufacturers, setManufacturers] = useState<Manufacturer[]>(INITIAL_MANUFACTURERS)
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -30,6 +22,22 @@ export const Manufacturers: React.FC = () => {
     description: '',
     status: 'active' as 'active' | 'inactive',
   })
+
+  const fetchManufacturers = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/manufacturers');
+      if (res.ok) {
+        const data = await res.json();
+        setManufacturers(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch manufacturers:', err);
+    }
+  }
+
+  useEffect(() => {
+    fetchManufacturers();
+  }, [])
 
   const filtered = manufacturers.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -48,22 +56,38 @@ export const Manufacturers: React.FC = () => {
     setModalOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    setManufacturers(prev => prev.filter(x => x.id !== id))
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`http://localhost:5000/api/manufacturers/${id}`, {
+        method: 'DELETE'
+      });
+      await fetchManufacturers();
+    } catch (err) {
+      console.error(err);
+    }
   }
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) return
 
-    if (editingId) {
-      setManufacturers(prev => prev.map(m => m.id === editingId ? { ...m, ...formData } : m))
-    } else {
-      const newM: Manufacturer = {
-        id: `m-${Date.now()}`,
-        ...formData,
+    try {
+      if (editingId) {
+        await fetch(`http://localhost:5000/api/manufacturers/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+      } else {
+        await fetch('http://localhost:5000/api/manufacturers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
       }
-      setManufacturers(prev => [newM, ...prev])
+      await fetchManufacturers();
+    } catch (err) {
+      console.error(err);
     }
     setModalOpen(false)
     setEditingId(null)

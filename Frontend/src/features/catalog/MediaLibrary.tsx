@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Image, Upload, Search, Edit2, Trash2, Eye, RefreshCw, X } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
@@ -86,6 +86,29 @@ export const MediaLibrary: React.FC = () => {
   const uploadFileInputRef = useRef<HTMLInputElement | null>(null)
   const editFileInputRef = useRef<HTMLInputElement | null>(null)
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const showNotification = (msg: string) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3000)
+  }
+
+  const fetchMedia = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/media');
+      if (res.ok) {
+        const data = await res.json();
+        setAssets(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch media:', err);
+    }
+  }
+
+  useEffect(() => {
+    fetchMedia();
+  }, [])
+
   const filtered = assets.filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase()) ||
     a.sku.toLowerCase().includes(search.toLowerCase())
@@ -109,18 +132,26 @@ export const MediaLibrary: React.FC = () => {
     }
   }
 
-  const handleUploadSave = (e: React.FormEvent) => {
+  const handleUploadSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newAsset: MediaAsset = {
-      id: `a-${Date.now()}`,
-      name: uploadForm.name.trim() || `Product-Image-${Date.now().toString().slice(-4)}.png`,
-      sku: uploadForm.sku.trim() || 'GENERAL-SKU',
-      type: 'Image (PNG)',
-      imageUrl: uploadForm.imageUrl || 'https://images.unsplash.com/photo-1562976540-1502c2145186?w=600&auto=format&fit=crop&q=80',
-      status: uploadForm.status,
+    if (!uploadForm.name || !uploadForm.imageUrl) {
+      alert('Please provide Name and Image URL')
+      return
     }
-    setAssets(prev => [newAsset, ...prev])
-    setUploadModalOpen(false)
+    try {
+      const res = await fetch('http://localhost:5000/api/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: uploadForm.imageUrl, filename: uploadForm.name, folder: uploadForm.type })
+      });
+      if (res.ok) {
+        await fetchMedia();
+        setUploadModalOpen(false)
+        showNotification('Media uploaded successfully!')
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   const handleOpenEdit = (asset: MediaAsset) => {
@@ -165,8 +196,18 @@ export const MediaLibrary: React.FC = () => {
     setEditingAsset(null)
   }
 
-  const handleDelete = (id: string) => {
-    setAssets(prev => prev.filter(a => a.id !== id))
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/media/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchMedia();
+        showNotification('Media deleted successfully!')
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   return (

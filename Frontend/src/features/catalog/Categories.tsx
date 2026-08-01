@@ -1,14 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Edit2, Trash2, Tag, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { SectionHeader, FilterBar, EmptyState, ConfirmDialog } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
-import { mockCategories } from '../../data/mockData'
 import type { Category } from '../../types'
 
 export const Categories: React.FC = () => {
-  const [categoriesList, setCategoriesList] = useState<Category[]>(mockCategories)
+  const [categoriesList, setCategoriesList] = useState<Category[]>([])
   const [search, setSearch] = useState('')
 
   // Modals state
@@ -36,6 +35,22 @@ export const Categories: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/categories');
+      if (res.ok) {
+        const data = await res.json();
+        setCategoriesList(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  }
+
+  useEffect(() => {
+    fetchCategories();
+  }, [])
+
   // --- Handlers ---
   const handleOpenAdd = () => {
     setFormData({
@@ -48,31 +63,22 @@ export const Categories: React.FC = () => {
     setAddOpen(true)
   }
 
-  const handleCreate = () => {
-    if (!formData.name.trim()) {
-      alert('Please enter a Category Name.')
-      return
+  const handleCreateCategory = async () => {
+    if (!formData.name || !formData.slug) return
+    try {
+      const res = await fetch('http://localhost:5000/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        await fetchCategories();
+        showNotification('Category created successfully!')
+      }
+    } catch (err) {
+      console.error(err);
     }
-
-    const generatedSlug =
-      formData.slug.trim() ||
-      formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-
-    const newCat: Category = {
-      id: `cat_${Date.now()}`,
-      name: formData.name,
-      slug: generatedSlug,
-      parentId: formData.parentId || undefined,
-      description: formData.description,
-      productCount: 0,
-      status: formData.status,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    setCategoriesList([newCat, ...categoriesList])
     setAddOpen(false)
-    showNotification(`Category "${newCat.name}" created successfully!`)
   }
 
   const handleOpenEdit = (cat: Category) => {
@@ -86,37 +92,38 @@ export const Categories: React.FC = () => {
     })
     setEditOpen(true)
   }
-
-  const handleSaveEdit = () => {
-    if (!editingCategory || !formData.name.trim()) return
-
-    setCategoriesList(prev =>
-      prev.map(c => {
-        if (c.id === editingCategory.id) {
-          return {
-            ...c,
-            name: formData.name,
-            slug: formData.slug.trim() || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            parentId: formData.parentId || undefined,
-            description: formData.description,
-            status: formData.status,
-            updatedAt: new Date().toISOString(),
-          }
-        }
-        return c
-      })
-    )
-
+  const handleEditCategory = async () => {
+    if (!editingCategory || !formData.name || !formData.slug) return
+    try {
+      const res = await fetch(`http://localhost:5000/api/categories/${editingCategory.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        await fetchCategories();
+        showNotification('Category updated successfully!')
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setEditOpen(false)
     setEditingCategory(null)
-    showNotification(`Category "${formData.name}" updated successfully!`)
   }
 
-  const handleConfirmDelete = () => {
+  const handleDeleteConfirm = async () => {
     if (!deletingCategory) return
-
-    setCategoriesList(prev => prev.filter(c => c.id !== deletingCategory.id))
-    showNotification(`Category "${deletingCategory.name}" deleted.`)
+    try {
+      const res = await fetch(`http://localhost:5000/api/categories/${deletingCategory.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchCategories();
+        showNotification('Category deleted successfully!')
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setDeleteOpen(false)
     setDeletingCategory(null)
   }
@@ -257,7 +264,7 @@ export const Categories: React.FC = () => {
         footer={
           <>
             <button onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleCreate} className="btn-primary">Create Category</button>
+            <button onClick={handleCreateCategory} className="btn-primary">Create Category</button>
           </>
         }
       >
@@ -311,7 +318,7 @@ export const Categories: React.FC = () => {
         footer={
           <>
             <button onClick={() => setEditOpen(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleSaveEdit} className="btn-primary">Save Changes</button>
+            <button onClick={handleEditCategory} className="btn-primary">Save Changes</button>
           </>
         }
       >
@@ -372,7 +379,7 @@ export const Categories: React.FC = () => {
       <ConfirmDialog
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleDeleteConfirm}
         title="Delete Category"
         message={`Are you sure you want to delete category "${deletingCategory?.name}"? Sub-categories and products assigned will lose their category parent.`}
         confirmLabel="Yes, Delete Category"

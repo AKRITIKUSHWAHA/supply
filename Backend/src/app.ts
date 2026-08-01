@@ -35,6 +35,9 @@ import storeRoutes from './routes/store.routes';
 
 import metricsRoutes from './routes/metrics.routes';
 import pricingRoutes from './routes/pricing.routes';
+import manufacturerRoutes from './routes/manufacturer.routes';
+import variantRoutes from './routes/variant.routes';
+import mediaRoutes from './routes/media.routes';
 
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/products', productRoutes);
@@ -43,6 +46,9 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/dashboard', metricsRoutes);
 app.use('/api/pricing', pricingRoutes);
+app.use('/api/manufacturers', manufacturerRoutes);
+app.use('/api/variants', variantRoutes);
+app.use('/api/media', mediaRoutes);
 
 // Error handlers
 app.use(notFoundHandler);
