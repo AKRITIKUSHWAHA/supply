@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export const getProducts = async (req: Request, res: Response) => {
   try {
-    const rawProducts = await prisma.product.findMany({
+    let rawProducts = await prisma.product.findMany({
       include: {
         category: true,
         brand: true,
@@ -16,6 +16,81 @@ export const getProducts = async (req: Request, res: Response) => {
         inventory: true
       }
     });
+
+    // Auto-seed sample products if database table is completely empty
+    if (rawProducts.length === 0) {
+      let supplier = await prisma.supplier.findFirst();
+      if (!supplier) {
+        supplier = await prisma.supplier.create({
+          data: { name: 'TechParts International', company: 'TechParts Corp', email: 'api@techparts.com', status: 'active' }
+        });
+      }
+
+      let categoryCPU = await prisma.category.findFirst({ where: { slug: 'processors-cpus' } });
+      if (!categoryCPU) {
+        categoryCPU = await prisma.category.create({ data: { name: 'Processors (CPUs)', slug: 'processors-cpus' } });
+      }
+      let categoryGPU = await prisma.category.findFirst({ where: { slug: 'graphics-cards-gpus' } });
+      if (!categoryGPU) {
+        categoryGPU = await prisma.category.create({ data: { name: 'Graphics Cards (GPUs)', slug: 'graphics-cards-gpus' } });
+      }
+
+      // 1. AMD Ryzen 9 7950X
+      const p1 = await prisma.product.create({
+        data: {
+          title: 'AMD Ryzen 9 7950X Processor 16-Core',
+          sku: 'CPU-AMD-7950X',
+          status: 'published',
+          supplierId: supplier.id,
+          categoryId: categoryCPU.id,
+          prices: { create: { price: 549.99, cost: 420.00, currency: 'USD' } },
+          inventory: { create: { quantity: 45, status: 'in_stock' } },
+          images: { create: { url: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=500&q=80', isFeatured: true } }
+        }
+      });
+      await runProductValidation(p1.id, prisma);
+
+      // 2. NVIDIA RTX 4090
+      const p2 = await prisma.product.create({
+        data: {
+          title: 'NVIDIA GeForce RTX 4090 24GB OC Edition',
+          sku: 'GPU-NV-4090',
+          status: 'published',
+          supplierId: supplier.id,
+          categoryId: categoryGPU.id,
+          prices: { create: { price: 1599.99, cost: 1350.00, currency: 'USD' } },
+          inventory: { create: { quantity: 18, status: 'in_stock' } },
+          images: { create: { url: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=500&q=80', isFeatured: true } }
+        }
+      });
+      await runProductValidation(p2.id, prisma);
+
+      // 3. Samsung 990 Pro SSD (no image intentionally to trigger validation issue!)
+      const p3 = await prisma.product.create({
+        data: {
+          title: 'Samsung 990 Pro 2TB NVMe PCIe 4.0 SSD',
+          sku: 'SSD-SAMSUNG-990P-2TB',
+          status: 'draft',
+          supplierId: supplier.id,
+          categoryId: categoryCPU.id,
+          prices: { create: { price: 179.99, cost: 130.00, currency: 'USD' } },
+          inventory: { create: { quantity: 30, status: 'in_stock' } }
+        }
+      });
+      await runProductValidation(p3.id, prisma);
+
+      // Re-fetch populated products
+      rawProducts = await prisma.product.findMany({
+        include: {
+          category: true,
+          brand: true,
+          supplier: true,
+          prices: true,
+          images: true,
+          inventory: true
+        }
+      });
+    }
 
     const data = rawProducts.map(p => ({
       id: p.id,
