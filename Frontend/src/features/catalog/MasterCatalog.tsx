@@ -1121,7 +1121,3 @@ export const MasterCatalog: React.FC = () => {
     </div>
   )
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> 8a9720bb2934046efc132fcd05063e7976336f95
