@@ -68,7 +68,7 @@ export const getProducts = async (req: Request, res: Response) => {
 
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const { name, title, sku, brand, categoryName, supplierName, pricing, inventory } = req.body;
+    const { name, title, sku, brand, categoryName, supplierName, pricing, inventory, imageUrl } = req.body;
     const productTitle = name || title || 'Untitled Product';
     const productSku = sku || `SKU-${Date.now()}`;
 
@@ -143,9 +143,22 @@ export const createProduct = async (req: Request, res: Response) => {
         category: true,
         brand: true,
         prices: true,
-        inventory: true
+        inventory: true,
+        images: true
       }
     });
+
+    // Save image if provided
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) {
+      await prisma.productImage.create({
+        data: {
+          productId: newProduct.id,
+          url: imageUrl.trim(),
+          isFeatured: true,
+          order: 0,
+        }
+      });
+    }
 
     const formatted = {
       id: newProduct.id,
@@ -178,7 +191,12 @@ export const createProduct = async (req: Request, res: Response) => {
         lastSynced: newProduct.updatedAt,
         status: (newProduct.inventory?.[0]?.quantity || 0) > 0 ? 'in_stock' : 'out_of_stock'
       },
-      images: [],
+      images: newProduct.images?.map(img => ({
+        id: img.id,
+        url: img.url,
+        isPrimary: img.isFeatured || false,
+        syncStatus: 'synced'
+      })) || (imageUrl ? [{ id: 'new', url: imageUrl, isPrimary: true, syncStatus: 'synced' }] : []),
       variants: [],
       attributes: [],
       createdAt: newProduct.createdAt,
