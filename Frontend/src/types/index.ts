@@ -253,6 +253,7 @@ export interface ValidationItem {
 }
 
 export interface ValidationError {
+  id?: string
   field: string
   type: 'duplicate_sku' | 'duplicate_upc' | 'missing_image' | 'missing_price' | 'missing_inventory' | 'invalid_category' | 'missing_attribute' | 'invalid_variant'
   message: string

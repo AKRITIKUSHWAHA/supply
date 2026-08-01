@@ -89,10 +89,10 @@ export const getReportsData = async (req: Request, res: Response) => {
         ];
 
     // Price changes from PricingAudit table
-    const priceAudits = await prisma.pricingAudit.findMany({
+    const priceAudits = (prisma as any).pricingAudit ? await (prisma as any).pricingAudit.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
-    });
+    }) : [];
     const priceChanges = priceAudits.map((pa: any) => ({
       sku: 'SKU-PRICE',
       name: `Price Revision #${pa.id.slice(0, 6)}`,
