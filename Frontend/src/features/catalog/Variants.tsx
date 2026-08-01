@@ -94,7 +94,7 @@ export const Variants: React.FC = () => {
     setEditOpen(true)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingVariant || !formData.name.trim()) return
 
     const valArray = formData.valuesString
@@ -102,68 +102,91 @@ export const Variants: React.FC = () => {
       .map(v => v.trim())
       .filter(Boolean)
 
-    setVariantsList(prev =>
-      prev.map(v => {
-        if (v.id === editingVariant.id) {
-          return {
-            ...v,
-            name: formData.name,
-            values: valArray.length > 0 ? valArray : v.values,
-          }
-        }
-        return v
-      })
-    )
-
-    setEditOpen(false)
-    setEditingVariant(null)
-    showNotification(`Variant Type "${formData.name}" updated!`)
+    try {
+      const res = await fetch(`http://localhost:5000/api/variants/${editingVariant.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          values: valArray.length > 0 ? valArray : editingVariant.values
+        })
+      });
+      if (res.ok) {
+        await fetchVariants();
+        setEditOpen(false)
+        setEditingVariant(null)
+        showNotification(`Variant Type "${formData.name}" updated!`)
+      }
+    } catch (err) {
+      console.error('Failed to update variant:', err);
+    }
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingVariant) return
 
-    setVariantsList(prev => prev.filter(v => v.id !== deletingVariant.id))
-    showNotification(`Variant Type "${deletingVariant.name}" deleted.`)
-    setDeleteOpen(false)
-    setDeletingVariant(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/variants/${deletingVariant.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchVariants();
+        showNotification(`Variant Type "${deletingVariant.name}" deleted.`)
+        setDeleteOpen(false)
+        setDeletingVariant(null)
+      }
+    } catch (err) {
+      console.error('Failed to delete variant:', err);
+    }
   }
 
-  const handleAddInlineValue = (id: string) => {
+  const handleAddInlineValue = async (id: string) => {
     if (!newValueInput.trim()) {
       setAddingValueForId(null)
       return
     }
 
-    setVariantsList(prev =>
-      prev.map(v => {
-        if (v.id === id) {
-          return {
-            ...v,
-            values: [...v.values, newValueInput.trim()],
-          }
-        }
-        return v
-      })
-    )
+    const targetVariant = variantsList.find(v => v.id === id);
+    if (!targetVariant) return;
 
-    showNotification(`Added "${newValueInput.trim()}" option`)
+    const newValues = [...targetVariant.values, newValueInput.trim()];
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/variants/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: newValues })
+      });
+      if (res.ok) {
+        await fetchVariants();
+        showNotification(`Added "${newValueInput.trim()}" option`)
+      }
+    } catch (err) {
+      console.error('Failed to add inline value:', err);
+    }
+
     setNewValueInput('')
     setAddingValueForId(null)
   }
 
-  const handleRemoveChipValue = (variantId: string, valToRemove: string) => {
-    setVariantsList(prev =>
-      prev.map(v => {
-        if (v.id === variantId) {
-          return {
-            ...v,
-            values: v.values.filter(val => val !== valToRemove),
-          }
-        }
-        return v
-      })
-    )
+  const handleRemoveChipValue = async (variantId: string, valToRemove: string) => {
+    const targetVariant = variantsList.find(v => v.id === variantId);
+    if (!targetVariant) return;
+
+    const newValues = targetVariant.values.filter(val => val !== valToRemove);
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/variants/${variantId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: newValues })
+      });
+      if (res.ok) {
+        await fetchVariants();
+      }
+    } catch (err) {
+      console.error('Failed to remove chip value:', err);
+    }
   }
 
   const filtered = variantsList.filter(v =>

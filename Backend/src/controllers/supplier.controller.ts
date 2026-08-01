@@ -53,32 +53,7 @@ export const getSuppliers = async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
-<<<<<<< HEAD
-    const data = rawSuppliers.map(s => ({
-      id: s.id,
-      name: s.name,
-      code: s.name ? s.name.substring(0, 3).toUpperCase() : 'SUP',
-      contactName: s.company || s.name || 'N/A',
-      contactEmail: s.email || 'N/A',
-      contactPhone: s.phone || '',
-      website: s.website || '',
-      country: 'USA',
-      connectionType: s.connections?.[0]?.type || 'api',
-      status: s.status === 'active' ? 'active' : 'inactive',
-      productCount: s.products?.length || 0,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-      rating: 5,
-      performance: {
-        fulfillmentRate: 99,
-        defectRate: 0.1,
-        onTimeDelivery: 98
-      }
-    }));
-
-=======
     const data = rawSuppliers.map(formatSupplier);
->>>>>>> d8a736a39cd7dc583a35cd8a605dec0158cf287f
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to fetch Suppliers' });
@@ -207,30 +182,16 @@ export const syncAllSuppliers = async (req: Request, res: Response) => {
 
 export const testSupplierConnection = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-<<<<<<< HEAD
-    if (id) {
-      const supplier = await prisma.supplier.findUnique({ where: { id } });
-      if (!supplier) {
-        return res.status(404).json({ error: 'Supplier not found' });
-      }
-      return res.json({
-        success: true,
-        message: `Connection test successful for supplier: ${supplier.name}`,
-        supplierId: id,
-        status: supplier.status,
-        latency: '45ms'
-      });
-    }
-    res.status(200).json({ status: 'success', message: 'Connection successful', latency: '45ms' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message || 'Connection test failed' });
-=======
     const supplier = await prisma.supplier.findUnique({ where: { id } });
     if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
-    res.json({ success: true, message: `Connection test successful for supplier ${supplier.name}` });
+    res.json({
+      success: true,
+      message: `Connection test successful for supplier: ${supplier.name}`,
+      supplierId: id,
+      status: supplier.status,
+      latency: '45ms'
+    });
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to test supplier connection' });
->>>>>>> d8a736a39cd7dc583a35cd8a605dec0158cf287f
+    res.status(500).json({ success: false, error: error.message || 'Connection test failed' });
   }
 };
