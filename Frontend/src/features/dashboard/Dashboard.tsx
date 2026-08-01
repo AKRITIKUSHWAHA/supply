@@ -167,36 +167,7 @@ export const Dashboard: React.FC = () => {
   }
 
   useEffect(() => {
-<<<<<<< HEAD
     loadStats()
-=======
-    setIsRefreshing(true)
-    fetch('http://localhost:5000/api/dashboard/stats')
-      .then(res => res.json())
-      .then(data => {
-        setM(prev => ({
-          ...prev,
-          totalProducts: data.totalProducts ?? 0,
-          totalSuppliers: data.totalSuppliers ?? 0,
-          connectedSuppliers: data.connectedSuppliers ?? 0,
-          disconnectedSuppliers: data.disconnectedSuppliers ?? 0,
-          publishedProducts: data.publishedProducts ?? 0,
-          missingImages: data.missingImages ?? 0,
-          missingCategories: data.missingCategories ?? 0,
-          missingPricing: data.missingPricing ?? 0,
-          duplicateProducts: data.duplicateProducts ?? 0,
-          productsImportedToday: data.productsImportedToday ?? 0,
-          productsReadyToPublish: data.productsReadyToPublish ?? 0,
-          runningJobs: data.runningJobs ?? 0,
-          completedJobs: data.completedJobs ?? 0,
-          failedJobs: data.failedJobs ?? 0,
-          totalStores: data.totalStores ?? 0,
-        }))
-        setLastUpdated('Updated just now (Live)')
-      })
-      .catch(err => console.error('Failed to load live metrics:', err))
-      .finally(() => setIsRefreshing(false))
->>>>>>> 7497aa3f10b6af8c7ab7155f82581a179b0b0324
   }, [])
 
   // Per-User Custom Cards & Widget Layout State
