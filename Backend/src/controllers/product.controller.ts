@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { runProductValidation } from '../utils/validationEngine';
 
 const prisma = new PrismaClient();
 
@@ -184,6 +185,9 @@ export const createProduct = async (req: Request, res: Response) => {
       updatedAt: newProduct.updatedAt
     };
 
+    // ── Run auto-validation engine after product is saved ──
+    await runProductValidation(newProduct.id, prisma);
+
     res.status(201).json(formatted);
   } catch (error: any) {
     console.error('Error creating product:', error);
@@ -329,6 +333,9 @@ export const updateProduct = async (req: Request, res: Response) => {
       updatedAt: updatedProduct.updatedAt
     };
 
+    // ── Re-run auto-validation engine after product is updated ──
+    await runProductValidation(id, prisma);
+
     res.json(formatted);
   } catch (error: any) {
     console.error('Error updating product:', error);
@@ -339,6 +346,8 @@ export const updateProduct = async (req: Request, res: Response) => {
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    // Clean up validation logs for this product before deleting
+    await prisma.validationLog.deleteMany({ where: { entityId: id, entityType: 'Product' } });
     await prisma.product.delete({ where: { id } });
     res.json({ message: 'Product deleted successfully' });
   } catch (error: any) {
