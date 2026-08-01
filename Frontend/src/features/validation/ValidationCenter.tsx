@@ -25,7 +25,7 @@ const errorTypeLabel: Record<string, string> = {
 
 export const ValidationCenter: React.FC = () => {
   const { role } = useAuth()
-  const [items, setItems] = useState<ValidationItem[]>(mockValidationItems)
+  const [items, setItems] = useState<ValidationItem[]>([])
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
   const [selectedSupplier, setSelectedSupplier] = useState('All Suppliers')
@@ -39,6 +39,22 @@ export const ValidationCenter: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false)
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null)
+
+  const fetchValidationItems = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/validation')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch validation items:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchValidationItems()
+  }, [])
 
   // Auto-clear toast messages
   useEffect(() => {

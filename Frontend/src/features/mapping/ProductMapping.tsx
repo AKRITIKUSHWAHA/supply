@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Edit2, Trash2, Link2, CheckCircle2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Edit2, Trash2, Plus } from 'lucide-react'
 import { SectionHeader, FilterBar, Select, ConfirmDialog } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
@@ -12,24 +12,33 @@ interface ProductMappingItem {
   status: 'mapped' | 'unmapped'
 }
 
-const INITIAL_DATA: ProductMappingItem[] = [
-  { id: '1', supplierSku: 'ASUS-ROG-X570-E', supplierName: 'TechParts Int.', masterSku: 'MB-X570-001', status: 'mapped' },
-  { id: '2', supplierSku: 'CMK32GX5M2B6000C36', supplierName: 'TechParts Int.', masterSku: 'RAM-DDR5-001', status: 'mapped' },
-  { id: '3', supplierSku: 'ASUS-TUF-4090-OC', supplierName: 'TechParts Int.', masterSku: '', status: 'unmapped' },
-  { id: '4', supplierSku: 'MZ-V8P2T0B/AM', supplierName: 'GlobalSource Ltd.', masterSku: 'SSD-980P-001', status: 'mapped' },
-  { id: '5', supplierSku: 'LOG-MX-M3S-GR', supplierName: 'GlobalSource Ltd.', masterSku: 'MOUSE-MX3S-001', status: 'mapped' },
-  { id: '6', supplierSku: 'ACME-CMK-50-BLK', supplierName: 'AcmeDistributors', masterSku: '', status: 'unmapped' },
-]
-
 export const ProductMapping: React.FC = () => {
-  const [items, setItems] = useState<ProductMappingItem[]>(INITIAL_DATA)
+  const [items, setItems] = useState<ProductMappingItem[]>([])
   const [search, setSearch] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
+  const [addOpen, setAddOpen] = useState(false)
+  const [newMapping, setNewMapping] = useState({ supplierSku: '', supplierName: '', masterSku: '' })
   const [editingItem, setEditingItem] = useState<ProductMappingItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editMasterSku, setEditMasterSku] = useState('')
+
+  const fetchMappings = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/products')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch product mappings:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchMappings()
+  }, [])
 
   const filtered = items.filter(item => {
     const matchesSearch =
@@ -43,33 +52,65 @@ export const ProductMapping: React.FC = () => {
 
   const suppliers = Array.from(new Set(items.map(i => i.supplierName)))
 
+  const handleCreateMapping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMapping.supplierSku.trim()) return
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierSku: newMapping.supplierSku,
+          supplierName: newMapping.supplierName || 'Default Supplier',
+          masterSku: newMapping.masterSku,
+        })
+      })
+      const created = await res.json()
+      setItems(prev => [created, ...prev])
+      setAddOpen(false)
+      setNewMapping({ supplierSku: '', supplierName: '', masterSku: '' })
+    } catch (err) {
+      console.error('Failed to create product mapping:', err)
+    }
+  }
+
   const handleOpenEdit = (item: ProductMappingItem) => {
     setEditingItem(item)
     setEditMasterSku(item.masterSku)
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingItem) return
     const updatedSku = editMasterSku.trim()
-    setItems(prev =>
-      prev.map(i =>
-        i.id === editingItem.id
-          ? {
-              ...i,
-              masterSku: updatedSku,
-              status: updatedSku ? 'mapped' : 'unmapped',
-            }
-          : i
-      )
-    )
-    setEditingItem(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/mappings/products/${editingItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierSku: editingItem.supplierSku,
+          supplierName: editingItem.supplierName,
+          masterSku: updatedSku,
+        })
+      })
+      const updated = await res.json()
+      setItems(prev => prev.map(i => i.id === editingItem.id ? updated : i))
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Failed to update product mapping:', err)
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deletingId) return
-    setItems(prev => prev.filter(i => i.id !== deletingId))
-    setDeletingId(null)
+    try {
+      await fetch(`http://localhost:5000/api/mappings/products/${deletingId}`, { method: 'DELETE' })
+      setItems(prev => prev.filter(i => i.id !== deletingId))
+    } catch (err) {
+      console.error('Failed to delete product mapping:', err)
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -78,6 +119,11 @@ export const ProductMapping: React.FC = () => {
       <SectionHeader
         title="Product Mapping"
         subtitle="Map supplier product SKUs to Master Catalog SKUs"
+        actions={
+          <button onClick={() => setAddOpen(true)} className="btn-primary btn-sm flex items-center gap-1.5 cursor-pointer">
+            <Plus size={14} /> Add Product Mapping
+          </button>
+        }
       />
 
       {/* Filter & Search Bar */}
@@ -177,6 +223,53 @@ export const ProductMapping: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add Modal */}
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add Product Mapping"
+        subtitle="Create a new supplier SKU to master SKU mapping rule"
+        size="md"
+      >
+        <form onSubmit={handleCreateMapping} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier SKU *</label>
+            <input
+              type="text"
+              required
+              value={newMapping.supplierSku}
+              onChange={e => setNewMapping({ ...newMapping, supplierSku: e.target.value })}
+              placeholder="e.g. ASUS-ROG-X570-E"
+              className="input font-mono uppercase"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Name</label>
+            <input
+              type="text"
+              value={newMapping.supplierName}
+              onChange={e => setNewMapping({ ...newMapping, supplierName: e.target.value })}
+              placeholder="e.g. TechParts Int."
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Master SKU</label>
+            <input
+              type="text"
+              value={newMapping.masterSku}
+              onChange={e => setNewMapping({ ...newMapping, masterSku: e.target.value })}
+              placeholder="e.g. MB-X570-001"
+              className="input font-mono uppercase"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Create Mapping</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal

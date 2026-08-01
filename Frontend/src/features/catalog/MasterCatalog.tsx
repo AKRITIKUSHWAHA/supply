@@ -802,9 +802,12 @@ export const MasterCatalog: React.FC = () => {
                 value={newProduct.supplierName}
                 onChange={e => setNewProduct({ ...newProduct, supplierName: e.target.value })}
               >
-                {suppliersList.map(s => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))}
+                {suppliersList.map(s => {
+                  const label = s.name ? (s.code ? `${s.name} (${s.code})` : s.name) : (s.code || 'Supplier')
+                  return (
+                    <option key={s.id} value={s.name}>{label}</option>
+                  )
+                })}
               </select>
             </div>
           </div>
@@ -931,9 +934,12 @@ export const MasterCatalog: React.FC = () => {
                 value={newProduct.supplierName}
                 onChange={e => setNewProduct({ ...newProduct, supplierName: e.target.value })}
               >
-                {suppliersList.map(s => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))}
+                {suppliersList.map(s => {
+                  const label = s.name ? (s.code ? `${s.name} (${s.code})` : s.name) : (s.code || 'Supplier')
+                  return (
+                    <option key={s.id} value={s.name}>{label}</option>
+                  )
+                })}
               </select>
             </div>
           </div>
@@ -1092,5 +1098,13 @@ export const MasterCatalog: React.FC = () => {
         </Modal>
       )}
     </div>
+  )
+}
+              </div >
+            </div >
+          </div >
+        </Modal >
+      )}
+    </div >
   )
 }

@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Edit2, Trash2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Edit2, Trash2, Plus } from 'lucide-react'
 import { SectionHeader, FilterBar, Select, ConfirmDialog } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
@@ -12,23 +12,33 @@ interface CategoryMappingItem {
   status: 'mapped' | 'unmapped'
 }
 
-const INITIAL_DATA: CategoryMappingItem[] = [
-  { id: '1', supplierCategory: 'PC Components > Motherboards', supplierName: 'TechParts Int.', masterCategory: 'Electronics > Computers > Motherboards', status: 'mapped' },
-  { id: '2', supplierCategory: 'Memory & Storage > RAM', supplierName: 'TechParts Int.', masterCategory: 'Electronics > Computers > Memory', status: 'mapped' },
-  { id: '3', supplierCategory: 'Peripherals > Input Devices', supplierName: 'GlobalSource Ltd.', masterCategory: 'Electronics > Peripherals', status: 'mapped' },
-  { id: '4', supplierCategory: 'Industrial > Cooling', supplierName: 'AcmeDistributors', masterCategory: '', status: 'unmapped' },
-  { id: '5', supplierCategory: 'Power > Modular PSUs', supplierName: 'TechParts Int.', masterCategory: 'Electronics > Power Supplies', status: 'mapped' },
-]
-
 export const CategoryMapping: React.FC = () => {
-  const [items, setItems] = useState<CategoryMappingItem[]>(INITIAL_DATA)
+  const [items, setItems] = useState<CategoryMappingItem[]>([])
   const [search, setSearch] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
+  const [addOpen, setAddOpen] = useState(false)
+  const [newMapping, setNewMapping] = useState({ supplierCategory: '', supplierName: '', masterCategory: '' })
   const [editingItem, setEditingItem] = useState<CategoryMappingItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editMasterCategory, setEditMasterCategory] = useState('')
+
+  const fetchMappings = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/categories')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch category mappings:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchMappings()
+  }, [])
 
   const filtered = items.filter(item => {
     const matchesSearch =
@@ -42,33 +52,65 @@ export const CategoryMapping: React.FC = () => {
 
   const suppliers = Array.from(new Set(items.map(i => i.supplierName)))
 
+  const handleCreateMapping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMapping.supplierCategory.trim()) return
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierCategory: newMapping.supplierCategory,
+          supplierName: newMapping.supplierName || 'Default Supplier',
+          masterCategory: newMapping.masterCategory,
+        })
+      })
+      const created = await res.json()
+      setItems(prev => [created, ...prev])
+      setAddOpen(false)
+      setNewMapping({ supplierCategory: '', supplierName: '', masterCategory: '' })
+    } catch (err) {
+      console.error('Failed to create category mapping:', err)
+    }
+  }
+
   const handleOpenEdit = (item: CategoryMappingItem) => {
     setEditingItem(item)
     setEditMasterCategory(item.masterCategory)
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingItem) return
     const updated = editMasterCategory.trim()
-    setItems(prev =>
-      prev.map(i =>
-        i.id === editingItem.id
-          ? {
-              ...i,
-              masterCategory: updated,
-              status: updated ? 'mapped' : 'unmapped',
-            }
-          : i
-      )
-    )
-    setEditingItem(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/mappings/categories/${editingItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierCategory: editingItem.supplierCategory,
+          supplierName: editingItem.supplierName,
+          masterCategory: updated,
+        })
+      })
+      const updatedItem = await res.json()
+      setItems(prev => prev.map(i => i.id === editingItem.id ? updatedItem : i))
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Failed to update category mapping:', err)
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deletingId) return
-    setItems(prev => prev.filter(i => i.id !== deletingId))
-    setDeletingId(null)
+    try {
+      await fetch(`http://localhost:5000/api/mappings/categories/${deletingId}`, { method: 'DELETE' })
+      setItems(prev => prev.filter(i => i.id !== deletingId))
+    } catch (err) {
+      console.error('Failed to delete category mapping:', err)
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -77,6 +119,11 @@ export const CategoryMapping: React.FC = () => {
       <SectionHeader
         title="Category Mapping"
         subtitle="Map supplier category names to Master Catalog categories"
+        actions={
+          <button onClick={() => setAddOpen(true)} className="btn-primary btn-sm flex items-center gap-1.5 cursor-pointer">
+            <Plus size={14} /> Add Category Mapping
+          </button>
+        }
       />
 
       {/* Filter & Search Bar */}
@@ -176,6 +223,53 @@ export const CategoryMapping: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add Modal */}
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add Category Mapping"
+        subtitle="Create a new supplier category to master category mapping rule"
+        size="md"
+      >
+        <form onSubmit={handleCreateMapping} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Category *</label>
+            <input
+              type="text"
+              required
+              value={newMapping.supplierCategory}
+              onChange={e => setNewMapping({ ...newMapping, supplierCategory: e.target.value })}
+              placeholder="e.g. PC Components > Motherboards"
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Name</label>
+            <input
+              type="text"
+              value={newMapping.supplierName}
+              onChange={e => setNewMapping({ ...newMapping, supplierName: e.target.value })}
+              placeholder="e.g. TechParts Int."
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Master Category</label>
+            <input
+              type="text"
+              value={newMapping.masterCategory}
+              onChange={e => setNewMapping({ ...newMapping, masterCategory: e.target.value })}
+              placeholder="e.g. Electronics > Computers > Motherboards"
+              className="input"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Create Mapping</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal

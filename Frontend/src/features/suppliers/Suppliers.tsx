@@ -31,12 +31,12 @@ import { useAuth } from '../../context/AuthContext'
 import { useSuppliers } from '../../context/SupplierContext'
 
 const CONNECTION_TYPES: { value: ConnectionType; label: string }[] = [
-  { value: 'api',   label: 'REST API' },
-  { value: 'ftp',   label: 'FTP' },
-  { value: 'sftp',  label: 'SFTP' },
-  { value: 'csv',   label: 'CSV Feed' },
+  { value: 'api', label: 'REST API' },
+  { value: 'ftp', label: 'FTP' },
+  { value: 'sftp', label: 'SFTP' },
+  { value: 'csv', label: 'CSV Feed' },
   { value: 'excel', label: 'Excel' },
-  { value: 'xml',   label: 'XML Feed' },
+  { value: 'xml', label: 'XML Feed' },
 ]
 
 const connTypeIcon: Record<ConnectionType, string> = {
@@ -92,101 +92,100 @@ export const Suppliers: React.FC = () => {
   }
 
   // --- Handlers ---
-  const handleSyncAll = () => {
+  const handleSyncAll = async () => {
     setIsSyncingAll(true)
-    setSuppliersList(prev => prev.map(s => ({ ...s, status: 'syncing' })))
-
-    setTimeout(() => {
-      setSuppliersList(prev =>
-        prev.map(s => ({
-          ...s,
-          status: 'connected',
-          lastSync: new Date().toISOString(),
-        }))
-      )
-      setIsSyncingAll(false)
+    try {
+      await fetch('http://localhost:5000/api/suppliers/sync-all', { method: 'POST' })
+      const res = await fetch('http://localhost:5000/api/suppliers')
+      const data = await res.json()
+      if (Array.isArray(data)) setSuppliersList(data)
       showNotification('All suppliers synchronized successfully!')
-    }, 2000)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSyncingAll(false)
+    }
   }
 
-  const handleSyncSingle = (id: string, name: string) => {
+  const handleSyncSingle = async (id: string, name: string) => {
     setSyncingSupplierId(id)
-    setSuppliersList(prev =>
-      prev.map(s => (s.id === id ? { ...s, status: 'syncing' } : s))
-    )
-
-    setTimeout(() => {
-      setSuppliersList(prev =>
-        prev.map(s =>
-          s.id === id
-            ? { ...s, status: 'connected', lastSync: new Date().toISOString() }
-            : s
-        )
-      )
-      setSyncingSupplierId(null)
+    try {
+      await fetch(`http://localhost:5000/api/suppliers/${id}/sync`, { method: 'POST' })
+      const res = await fetch('http://localhost:5000/api/suppliers')
+      const data = await res.json()
+      if (Array.isArray(data)) setSuppliersList(data)
       showNotification(`Supplier "${name}" synchronized successfully!`)
-    }, 1500)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSyncingSupplierId(null)
+    }
   }
 
-  const handleToggleStatus = (id: string) => {
-    setSuppliersList(prev =>
-      prev.map(s => {
-        if (s.id === id) {
-          const nextStatus: SupplierStatus =
-            s.status === 'connected' ? 'disconnected' : 'connected'
-          showNotification(
-            `Supplier "${s.name}" is now ${nextStatus.toUpperCase()}`
-          )
-          return { ...s, status: nextStatus }
-        }
-        return s
+  const handleToggleStatus = async (id: string) => {
+    const current = suppliersList.find(s => s.id === id)
+    if (!current) return
+    const nextStatus: SupplierStatus = current.status === 'connected' ? 'disconnected' : 'connected'
+    try {
+      const res = await fetch(`http://localhost:5000/api/suppliers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus })
       })
-    )
+      const updated = await res.json()
+      setSuppliersList(prev => prev.map(s => (s.id === id ? updated : s)))
+      showNotification(`Supplier "${current.name}" is now ${nextStatus.toUpperCase()}`)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  const handleCreateSupplier = () => {
+  const handleCreateSupplier = async () => {
     if (!newSupplier.name.trim() || !newSupplier.code.trim()) {
       alert('Please enter Supplier Name and Supplier Code.')
       return
     }
 
-    const created: Supplier = {
-      id: `s_${Date.now()}`,
-      name: newSupplier.name,
-      code: newSupplier.code.toUpperCase(),
-      contactName: newSupplier.contactName || 'Primary Contact',
-      contactEmail: newSupplier.contactEmail || 'contact@supplier.com',
-      country: newSupplier.country || 'United States',
-      connectionType: newSupplier.connectionType,
-      status: 'connected',
-      productCount: 0,
-      errorCount: 0,
-      createdAt: new Date().toISOString(),
-      lastSync: new Date().toISOString(),
-      credentials: {
-        apiUrl: newSupplier.apiUrl || undefined,
-        apiKey: newSupplier.apiKey || undefined,
-        ftpHost: newSupplier.ftpHost || undefined,
-        ftpUsername: newSupplier.ftpUsername || undefined,
-      },
+    try {
+      const res = await fetch('http://localhost:5000/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newSupplier.name,
+          code: newSupplier.code.toUpperCase(),
+          contactName: newSupplier.contactName || 'Primary Contact',
+          contactEmail: newSupplier.contactEmail || 'contact@supplier.com',
+          country: newSupplier.country || 'United States',
+          connectionType: newSupplier.connectionType,
+          status: 'connected',
+          credentials: {
+            apiUrl: newSupplier.apiUrl || undefined,
+            apiKey: newSupplier.apiKey || undefined,
+            ftpHost: newSupplier.ftpHost || undefined,
+            ftpUsername: newSupplier.ftpUsername || undefined,
+          }
+        })
+      })
+      const created = await res.json()
+      setSuppliersList(prev => [created, ...prev])
+      setAddOpen(false)
+      setNewSupplier({
+        name: '',
+        code: '',
+        contactName: '',
+        contactEmail: '',
+        country: '',
+        connectionType: 'api',
+        apiUrl: '',
+        apiKey: '',
+        ftpHost: '',
+        ftpUsername: '',
+        ftpPassword: '',
+      })
+      showNotification(`Supplier "${created.name}" created successfully!`)
+    } catch (err) {
+      console.error('Failed to create supplier:', err)
     }
-
-    setSuppliersList([created, ...suppliersList])
-    setAddOpen(false)
-    setNewSupplier({
-      name: '',
-      code: '',
-      contactName: '',
-      contactEmail: '',
-      country: '',
-      connectionType: 'api',
-      apiUrl: '',
-      apiKey: '',
-      ftpHost: '',
-      ftpUsername: '',
-      ftpPassword: '',
-    })
-    showNotification(`Supplier "${created.name}" created successfully!`)
   }
 
   const handleOpenEdit = (s: Supplier) => {
@@ -208,41 +207,49 @@ export const Suppliers: React.FC = () => {
     setOpenMenuId(null)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingSupplier) return
-    setSuppliersList(prev =>
-      prev.map(s => {
-        if (s.id === editingSupplier.id) {
-          return {
-            ...s,
-            name: newSupplier.name,
-            code: newSupplier.code.toUpperCase(),
-            contactName: newSupplier.contactName,
-            contactEmail: newSupplier.contactEmail,
-            country: newSupplier.country,
-            connectionType: newSupplier.connectionType,
-            credentials: {
-              ...s.credentials,
-              apiUrl: newSupplier.apiUrl,
-              apiKey: newSupplier.apiKey,
-              ftpHost: newSupplier.ftpHost,
-            },
+    try {
+      const res = await fetch(`http://localhost:5000/api/suppliers/${editingSupplier.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newSupplier.name,
+          code: newSupplier.code.toUpperCase(),
+          contactName: newSupplier.contactName,
+          contactEmail: newSupplier.contactEmail,
+          country: newSupplier.country,
+          connectionType: newSupplier.connectionType,
+          credentials: {
+            apiUrl: newSupplier.apiUrl,
+            apiKey: newSupplier.apiKey,
+            ftpHost: newSupplier.ftpHost,
+            ftpUsername: newSupplier.ftpUsername,
           }
-        }
-        return s
+        })
       })
-    )
-    setEditOpen(false)
-    setEditingSupplier(null)
-    showNotification(`Supplier "${newSupplier.name}" updated successfully!`)
+      const updated = await res.json()
+      setSuppliersList(prev => prev.map(s => (s.id === editingSupplier.id ? updated : s)))
+      setEditOpen(false)
+      setEditingSupplier(null)
+      showNotification(`Supplier "${newSupplier.name}" updated successfully!`)
+    } catch (err) {
+      console.error('Failed to save supplier:', err)
+    }
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deletingSupplier) return
-    setSuppliersList(prev => prev.filter(s => s.id !== deletingSupplier.id))
-    showNotification(`Supplier "${deletingSupplier.name}" deleted.`)
-    setDeleteOpen(false)
-    setDeletingSupplier(null)
+    try {
+      await fetch(`http://localhost:5000/api/suppliers/${deletingSupplier.id}`, { method: 'DELETE' })
+      setSuppliersList(prev => prev.filter(s => s.id !== deletingSupplier.id))
+      showNotification(`Supplier "${deletingSupplier.name}" deleted.`)
+    } catch (err) {
+      console.error('Failed to delete supplier:', err)
+    } finally {
+      setDeleteOpen(false)
+      setDeletingSupplier(null)
+    }
   }
 
   // --- Filtering & Pagination ---
@@ -335,10 +342,10 @@ export const Suppliers: React.FC = () => {
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
-          { label: 'Connected',    value: suppliersList.filter(s => s.status === 'connected').length,    color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50' },
-          { label: 'Disconnected', value: suppliersList.filter(s => s.status === 'disconnected').length, color: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/50' },
-          { label: 'Error State',  value: suppliersList.filter(s => s.status === 'error').length,        color: 'text-rose-600 dark:text-rose-400',    bg: 'bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/50' },
-          { label: 'Syncing',      value: suppliersList.filter(s => s.status === 'syncing').length,      color: 'text-cyan-600 dark:text-cyan-400',    bg: 'bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200/80 dark:border-cyan-900/50' },
+          { label: 'Connected', value: suppliersList.filter(s => s.status === 'connected').length, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50' },
+          { label: 'Disconnected', value: suppliersList.filter(s => s.status === 'disconnected').length, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/50' },
+          { label: 'Error State', value: suppliersList.filter(s => s.status === 'error').length, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/50' },
+          { label: 'Syncing', value: suppliersList.filter(s => s.status === 'syncing').length, color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200/80 dark:border-cyan-900/50' },
         ].map(c => (
           <div key={c.label} className={`${c.bg} rounded-2xl p-3 sm:p-4 cursor-pointer transition-transform hover:scale-[1.01] shadow-xs`} onClick={() => setStatusFilter(c.label.toLowerCase().includes('connected') ? 'connected' : c.label.toLowerCase().includes('disconnected') ? 'disconnected' : c.label.toLowerCase().includes('error') ? 'error' : 'syncing')}>
             <p className={`text-xl sm:text-2xl font-bold ${c.color}`}>{c.value}</p>
@@ -614,11 +621,10 @@ export const Suppliers: React.FC = () => {
                   key={t.value}
                   type="button"
                   onClick={() => setNewSupplier({ ...newSupplier, connectionType: t.value })}
-                  className={`border rounded-xl p-3 text-center transition-all text-sm font-medium ${
-                    newSupplier.connectionType === t.value
-                      ? 'border-primary-500 bg-primary-50 text-primary-700 ring-2 ring-primary-500/20'
-                      : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                  }`}
+                  className={`border rounded-xl p-3 text-center transition-all text-sm font-medium ${newSupplier.connectionType === t.value
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 ring-2 ring-primary-500/20'
+                    : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                    }`}
                 >
                   <div className="text-lg mb-1">{connTypeIcon[t.value]}</div>
                   {t.label}
@@ -798,11 +804,10 @@ const SupplierDetail: React.FC<{
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-2 text-sm font-medium capitalize whitespace-nowrap border-b-2 transition-colors ${
-              tab === t
-                ? 'border-primary-600 text-primary-700 dark:text-primary-400 font-bold'
-                : 'border-transparent text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
+            className={`px-3 py-2 text-sm font-medium capitalize whitespace-nowrap border-b-2 transition-colors ${tab === t
+              ? 'border-primary-600 text-primary-700 dark:text-primary-400 font-bold'
+              : 'border-transparent text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
           >
             {t}
           </button>
@@ -941,5 +946,16 @@ const SupplierDetail: React.FC<{
         )
       )}
     </Modal>
+  )
+}
+              <p className="font-semibold flex items-center gap-1.5 mb-1">
+                <AlertCircle size={14} className="text-rose-600" /> Timeout on Image Download Batch
+              </p>
+              <p className="text-rose-600 font-mono text-2xs">FTP connection idle timeout after 120s. 3 items skipped.</p>
+            </div >
+          </div >
+        )
+      )}
+    </Modal >
   )
 }

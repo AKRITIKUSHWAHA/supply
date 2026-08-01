@@ -12,7 +12,7 @@ import type { Store } from '../../types'
 export const StoreManagement: React.FC = () => {
   const navigate = useNavigate()
 
-  const [storesList, setStoresList] = useState<Store[]>(mockStores)
+  const [storesList, setStoresList] = useState<Store[]>([])
   const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -33,29 +33,40 @@ export const StoreManagement: React.FC = () => {
     apiKey: '',
   })
 
+  const fetchStores = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/stores')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setStoresList(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch stores:', err)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchStores()
+  }, [])
+
   const showNotification = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3000)
   }
 
   // --- Handlers ---
-  const handleSyncStore = (id: string, name: string) => {
+  const handleSyncStore = async (id: string, name: string) => {
     setSyncingStoreId(id)
-    setStoresList(prev =>
-      prev.map(s => (s.id === id ? { ...s, syncStatus: 'syncing' } : s))
-    )
-
-    setTimeout(() => {
-      setStoresList(prev =>
-        prev.map(s =>
-          s.id === id
-            ? { ...s, syncStatus: 'synced', status: 'active', lastSync: new Date().toISOString() }
-            : s
-        )
-      )
-      setSyncingStoreId(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
+      const updated = await res.json()
+      setStoresList(prev => prev.map(s => (s.id === id ? updated : s)))
       showNotification(`Store "${name}" catalog synchronized successfully!`)
-    }, 1500)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSyncingStoreId(null)
+    }
   }
 
   // Route to Website Sync status page inside app cleanly without broken external DNS error
@@ -70,28 +81,31 @@ export const StoreManagement: React.FC = () => {
     setAddOpen(true)
   }
 
-  const handleCreateStore = () => {
+  const handleCreateStore = async () => {
     if (!formData.name.trim() || !formData.url.trim()) {
       alert('Please enter Store Name and URL.')
       return
     }
 
-    const created: Store = {
-      id: `store_${Date.now()}`,
-      name: formData.name,
-      url: formData.url.startsWith('http') ? formData.url : `https://${formData.url}`,
-      platform: formData.platform,
-      region: formData.region,
-      status: 'active',
-      syncStatus: 'synced',
-      productCount: 0,
-      lastSync: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+    try {
+      const res = await fetch('http://localhost:5000/api/stores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          url: formData.url.startsWith('http') ? formData.url : `https://${formData.url}`,
+          platform: formData.platform,
+          region: formData.region,
+          apiKey: formData.apiKey,
+        })
+      })
+      const created = await res.json()
+      setStoresList(prev => [created, ...prev])
+      setAddOpen(false)
+      showNotification(`Store "${created.name}" connected!`)
+    } catch (err) {
+      console.error('Failed to create store:', err)
     }
-
-    setStoresList([created, ...storesList])
-    setAddOpen(false)
-    showNotification(`Store "${created.name}" connected!`)
   }
 
   const handleOpenEdit = (store: Store, e: React.MouseEvent) => {
@@ -113,36 +127,43 @@ export const StoreManagement: React.FC = () => {
     setDeleteOpen(true)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingStore || !formData.name.trim() || !formData.url.trim()) return
 
-    setStoresList(prev =>
-      prev.map(s => {
-        if (s.id === editingStore.id) {
-          return {
-            ...s,
-            name: formData.name,
-            url: formData.url.startsWith('http') ? formData.url : `https://${formData.url}`,
-            platform: formData.platform,
-            region: formData.region,
-          }
-        }
-        return s
+    try {
+      const res = await fetch(`http://localhost:5000/api/stores/${editingStore.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          url: formData.url.startsWith('http') ? formData.url : `https://${formData.url}`,
+          platform: formData.platform,
+          region: formData.region,
+        })
       })
-    )
-
-    setEditOpen(false)
-    setEditingStore(null)
-    showNotification(`Store "${formData.name}" details updated!`)
+      const updated = await res.json()
+      setStoresList(prev => prev.map(s => (s.id === editingStore.id ? updated : s)))
+      setEditOpen(false)
+      setEditingStore(null)
+      showNotification(`Store "${formData.name}" details updated!`)
+    } catch (err) {
+      console.error('Failed to update store:', err)
+    }
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingStore) return
 
-    setStoresList(prev => prev.filter(s => s.id !== deletingStore.id))
-    showNotification(`Store "${deletingStore.name}" connection removed.`)
-    setDeleteOpen(false)
-    setDeletingStore(null)
+    try {
+      await fetch(`http://localhost:5000/api/stores/${deletingStore.id}`, { method: 'DELETE' })
+      setStoresList(prev => prev.filter(s => s.id !== deletingStore.id))
+      showNotification(`Store "${deletingStore.name}" connection removed.`)
+    } catch (err) {
+      console.error('Failed to delete store:', err)
+    } finally {
+      setDeleteOpen(false)
+      setDeletingStore(null)
+    }
   }
 
   return (

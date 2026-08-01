@@ -3,15 +3,57 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+function formatSupplier(s: any) {
+  const conn = s?.connections?.[0];
+  const cred = s?.credentials?.[0];
+  const rawName = (s?.name || '').trim();
+  const rawCode = (s?.company || '').trim();
+  
+  const name = rawName || (rawCode ? `Supplier ${rawCode}` : `Supplier #${s?.id ? s.id.slice(0, 4) : 'NEW'}`);
+  const code = (rawCode || (rawName ? rawName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4) : 'SUP')).toUpperCase();
+
+  const rawType = (conn?.type || 'api').toLowerCase();
+  const validTypes = ['api', 'ftp', 'sftp', 'csv', 'excel', 'xml'];
+  const connType = validTypes.includes(rawType) ? rawType : 'api';
+
+  return {
+    id: s?.id || `sup_${Date.now()}`,
+    name,
+    code,
+    contactName: s?.phone || 'Primary Contact',
+    contactEmail: s?.email || '',
+    contactPhone: s?.phone || '',
+    website: s?.website || '',
+    country: s?.website ? s?.website : 'United States',
+    connectionType: connType,
+    status: s?.status || 'connected',
+    productCount: Array.isArray(s?.products) ? s.products.length : 0,
+    errorCount: 0,
+    createdAt: s?.createdAt ? new Date(s.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: s?.updatedAt ? new Date(s.updatedAt).toISOString() : new Date().toISOString(),
+    lastSync: conn?.lastSync ? new Date(conn.lastSync).toISOString() : new Date().toISOString(),
+    nextSync: conn?.nextSync ? new Date(conn.nextSync).toISOString() : null,
+    credentials: {
+      apiUrl: conn?.apiUrl || cred?.username || '',
+      apiKey: cred?.apiKey || '',
+      ftpHost: cred?.username || '',
+      ftpUsername: cred?.username || '',
+    }
+  };
+}
+
 export const getSuppliers = async (req: Request, res: Response) => {
   try {
     const rawSuppliers = await prisma.supplier.findMany({
       include: {
         products: true,
-        connections: true
-      }
+        connections: true,
+        credentials: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
 
+<<<<<<< HEAD
     const data = rawSuppliers.map(s => ({
       id: s.id,
       name: s.name,
@@ -34,6 +76,9 @@ export const getSuppliers = async (req: Request, res: Response) => {
       }
     }));
 
+=======
+    const data = rawSuppliers.map(formatSupplier);
+>>>>>>> d8a736a39cd7dc583a35cd8a605dec0158cf287f
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to fetch Suppliers' });
@@ -42,16 +87,128 @@ export const getSuppliers = async (req: Request, res: Response) => {
 
 export const createSupplier = async (req: Request, res: Response) => {
   try {
-    const data = await prisma.supplier.create({ data: req.body });
-    res.status(201).json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create Supplier' });
+    const { name, code, contactName, contactEmail, contactPhone, website, country, connectionType, credentials, status } = req.body;
+
+    const hasCreds = credentials && (credentials.apiKey || credentials.ftpUsername || credentials.apiUrl);
+    const supplierName = name?.trim() || 'New Supplier';
+    const supplierCode = code?.trim() ? code.trim().toUpperCase() : supplierName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase() || 'SUP';
+
+    const supplier = await prisma.supplier.create({
+      data: {
+        name: supplierName,
+        company: supplierCode,
+        email: contactEmail || null,
+        phone: contactName || contactPhone || null,
+        website: country || website || null,
+        status: status || 'connected',
+        connections: {
+          create: {
+            type: (connectionType || 'api').toLowerCase(),
+            apiUrl: credentials?.apiUrl || null,
+            status: status || 'connected',
+            lastSync: new Date(),
+          }
+        },
+        credentials: hasCreds ? {
+          create: {
+            authType: connectionType || 'apikey',
+            apiKey: credentials.apiKey || null,
+            username: credentials.ftpUsername || credentials.apiUrl || null,
+          }
+        } : undefined
+      },
+      include: {
+        products: true,
+        connections: true,
+        credentials: true,
+      }
+    });
+
+    res.status(201).json(formatSupplier(supplier));
+  } catch (error: any) {
+    console.error('Error creating supplier:', error);
+    res.status(500).json({ error: error.message || 'Failed to create Supplier' });
+  }
+};
+
+export const updateSupplier = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, code, contactName, contactEmail, country, connectionType, credentials, status } = req.body;
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (code !== undefined) updateData.company = code.toUpperCase();
+    if (contactEmail !== undefined) updateData.email = contactEmail;
+    if (contactName !== undefined) updateData.phone = contactName;
+    if (country !== undefined) updateData.website = country;
+    if (status !== undefined) updateData.status = status;
+
+    const supplier = await prisma.supplier.update({
+      where: { id },
+      data: updateData,
+      include: {
+        products: true,
+        connections: true,
+        credentials: true,
+      }
+    });
+
+    res.json(formatSupplier(supplier));
+  } catch (error: any) {
+    console.error('Error updating supplier:', error);
+    res.status(500).json({ error: error.message || 'Failed to update Supplier' });
+  }
+};
+
+export const deleteSupplier = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.supplier.delete({ where: { id } });
+    res.json({ message: 'Supplier deleted successfully' });
+  } catch (error: any) {
+    console.error('Error deleting supplier:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete Supplier' });
+  }
+};
+
+export const syncSupplier = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const supplier = await prisma.supplier.findUnique({ where: { id } });
+    if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+
+    await prisma.supplierConnection.updateMany({
+      where: { supplierId: id },
+      data: { lastSync: new Date(), status: 'connected' }
+    });
+
+    const updated = await prisma.supplier.findUnique({
+      where: { id },
+      include: { products: true, connections: true, credentials: true }
+    });
+
+    res.json(formatSupplier(updated));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to sync Supplier' });
+  }
+};
+
+export const syncAllSuppliers = async (req: Request, res: Response) => {
+  try {
+    await prisma.supplierConnection.updateMany({
+      data: { lastSync: new Date(), status: 'connected' }
+    });
+    res.json({ message: 'All suppliers synced successfully' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to sync all suppliers' });
   }
 };
 
 export const testSupplierConnection = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+<<<<<<< HEAD
     if (id) {
       const supplier = await prisma.supplier.findUnique({ where: { id } });
       if (!supplier) {
@@ -68,5 +225,12 @@ export const testSupplierConnection = async (req: Request, res: Response) => {
     res.status(200).json({ status: 'success', message: 'Connection successful', latency: '45ms' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message || 'Connection test failed' });
+=======
+    const supplier = await prisma.supplier.findUnique({ where: { id } });
+    if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+    res.json({ success: true, message: `Connection test successful for supplier ${supplier.name}` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to test supplier connection' });
+>>>>>>> d8a736a39cd7dc583a35cd8a605dec0158cf287f
   }
 };

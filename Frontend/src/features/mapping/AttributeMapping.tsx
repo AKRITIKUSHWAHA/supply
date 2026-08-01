@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Edit2, Trash2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Edit2, Trash2, Plus } from 'lucide-react'
 import { SectionHeader, FilterBar, Select, ConfirmDialog } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
@@ -12,23 +12,33 @@ interface AttributeMappingItem {
   status: 'mapped' | 'unmapped'
 }
 
-const INITIAL_DATA: AttributeMappingItem[] = [
-  { id: '1', supplierAttribute: 'wrrnty_period', supplierName: 'TechParts Int.', masterAttribute: 'Warranty Duration (Months)', status: 'mapped' },
-  { id: '2', supplierAttribute: 'pwr_consumption_w', supplierName: 'TechParts Int.', masterAttribute: 'Power Consumption (Wattage)', status: 'mapped' },
-  { id: '3', supplierAttribute: 'dim_lxwxh', supplierName: 'GlobalSource Ltd.', masterAttribute: 'Dimensions (L x W x H)', status: 'mapped' },
-  { id: '4', supplierAttribute: 'pkg_wt_kg', supplierName: 'GlobalSource Ltd.', masterAttribute: 'Package Weight (kg)', status: 'mapped' },
-  { id: '5', supplierAttribute: 'custom_cert_std', supplierName: 'AcmeDistributors', masterAttribute: '', status: 'unmapped' },
-]
-
 export const AttributeMapping: React.FC = () => {
-  const [items, setItems] = useState<AttributeMappingItem[]>(INITIAL_DATA)
+  const [items, setItems] = useState<AttributeMappingItem[]>([])
   const [search, setSearch] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
+  const [addOpen, setAddOpen] = useState(false)
+  const [newMapping, setNewMapping] = useState({ supplierAttribute: '', supplierName: '', masterAttribute: '' })
   const [editingItem, setEditingItem] = useState<AttributeMappingItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editMasterAttribute, setEditMasterAttribute] = useState('')
+
+  const fetchMappings = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/attributes')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setItems(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch attribute mappings:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchMappings()
+  }, [])
 
   const filtered = items.filter(item => {
     const matchesSearch =
@@ -42,29 +52,65 @@ export const AttributeMapping: React.FC = () => {
 
   const suppliers = Array.from(new Set(items.map(i => i.supplierName)))
 
+  const handleCreateMapping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMapping.supplierAttribute.trim()) return
+    try {
+      const res = await fetch('http://localhost:5000/api/mappings/attributes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierAttribute: newMapping.supplierAttribute,
+          supplierName: newMapping.supplierName || 'Default Supplier',
+          masterAttribute: newMapping.masterAttribute,
+        })
+      })
+      const created = await res.json()
+      setItems(prev => [created, ...prev])
+      setAddOpen(false)
+      setNewMapping({ supplierAttribute: '', supplierName: '', masterAttribute: '' })
+    } catch (err) {
+      console.error('Failed to create attribute mapping:', err)
+    }
+  }
+
   const handleOpenEdit = (item: AttributeMappingItem) => {
     setEditingItem(item)
     setEditMasterAttribute(item.masterAttribute)
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingItem) return
     const updated = editMasterAttribute.trim()
-    setItems(prev =>
-      prev.map(i =>
-        i.id === editingItem.id
-          ? { ...i, masterAttribute: updated, status: updated ? 'mapped' : 'unmapped' }
-          : i
-      )
-    )
-    setEditingItem(null)
+    try {
+      const res = await fetch(`http://localhost:5000/api/mappings/attributes/${editingItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierAttribute: editingItem.supplierAttribute,
+          supplierName: editingItem.supplierName,
+          masterAttribute: updated,
+        })
+      })
+      const updatedItem = await res.json()
+      setItems(prev => prev.map(i => i.id === editingItem.id ? updatedItem : i))
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Failed to update attribute mapping:', err)
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deletingId) return
-    setItems(prev => prev.filter(i => i.id !== deletingId))
-    setDeletingId(null)
+    try {
+      await fetch(`http://localhost:5000/api/mappings/attributes/${deletingId}`, { method: 'DELETE' })
+      setItems(prev => prev.filter(i => i.id !== deletingId))
+    } catch (err) {
+      console.error('Failed to delete attribute mapping:', err)
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -72,6 +118,11 @@ export const AttributeMapping: React.FC = () => {
       <SectionHeader
         title="Attribute Mapping"
         subtitle="Map supplier product attribute fields to Master Catalog standard attributes"
+        actions={
+          <button onClick={() => setAddOpen(true)} className="btn-primary btn-sm flex items-center gap-1.5 cursor-pointer">
+            <Plus size={14} /> Add Attribute Mapping
+          </button>
+        }
       />
 
       <FilterBar search={search} onSearch={setSearch} placeholder="Search supplier attribute or master attribute...">
@@ -152,6 +203,29 @@ export const AttributeMapping: React.FC = () => {
         </div>
       </div>
 
+      {/* Add Modal */}
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Attribute Mapping" subtitle="Create a new supplier attribute to master attribute mapping rule" size="md">
+        <form onSubmit={handleCreateMapping} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Attribute *</label>
+            <input type="text" required value={newMapping.supplierAttribute} onChange={e => setNewMapping({ ...newMapping, supplierAttribute: e.target.value })} placeholder="e.g. wrrnty_period" className="input" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Supplier Name</label>
+            <input type="text" value={newMapping.supplierName} onChange={e => setNewMapping({ ...newMapping, supplierName: e.target.value })} placeholder="e.g. TechParts Int." className="input" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Master Attribute</label>
+            <input type="text" value={newMapping.masterAttribute} onChange={e => setNewMapping({ ...newMapping, masterAttribute: e.target.value })} placeholder="e.g. Warranty Duration (Months)" className="input" />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Create Mapping</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Modal */}
       <Modal open={editingItem !== null} onClose={() => setEditingItem(null)} title="Edit Attribute Mapping" subtitle={`Supplier Attribute: ${editingItem?.supplierAttribute}`} size="md">
         <form onSubmit={handleSaveEdit} className="space-y-4">
           <div>

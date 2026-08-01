@@ -16,62 +16,7 @@ interface NotificationItem {
   details?: string
 }
 
-const mockNotificationData: NotificationItem[] = [
-  {
-    id: 'n1',
-    title: 'QuickShip Sync Failed',
-    message: 'QuickShip LLC inventory sync failed — 256 items could not be matched.',
-    type: 'error',
-    timestamp: '2026-07-24T12:22:00Z',
-    read: false,
-    details: 'Error Code: SYNC_ERR_MATCH_404\nFailed during variant mapping lookup. 256 SKUs in the QuickShip import feed did not match any variants in the Master Catalog. Please review variant mapping settings.'
-  },
-  {
-    id: 'n2',
-    title: 'FTP Connection Error',
-    message: 'AcmeDistributors FTP connection error. Failed to connect after 3 attempts.',
-    type: 'warning',
-    timestamp: '2026-07-24T12:00:00Z',
-    read: false,
-    details: 'Connection error on ftp.acmedistributors.com:21.\nTimeout occurred after 30000ms. Host might be temporarily offline or firewall settings are blocking the incoming integration traffic.'
-  },
-  {
-    id: 'n3',
-    title: 'Inventory Sync Completed',
-    message: 'Inventory synchronization completed successfully for PrimeSupply Corp.',
-    type: 'success',
-    timestamp: '2026-07-24T11:51:00Z',
-    read: true,
-    details: 'Job ID: job_prime_8832\nTotal processed items: 12,482\nUpdated: 341\nFailed: 0\nCompleted in 42.6 seconds.'
-  },
-  {
-    id: 'n4',
-    title: 'Pending Validation Review',
-    message: '5 products are pending validation review from EastWest Imports.',
-    type: 'info',
-    timestamp: '2026-07-24T11:23:00Z',
-    read: true,
-    details: 'New import payload contained 5 products with missing attributes or low image resolutions.\nProducts have been sent to the Validation Center for manual review.'
-  },
-  {
-    id: 'n5',
-    title: 'Price Sync Completed',
-    message: 'Pricing update successfully synced to Shopify and WooCommerce stores.',
-    type: 'success',
-    timestamp: '2026-07-24T09:15:00Z',
-    read: true,
-    details: 'Job ID: job_price_3992\nSynced 82,770 product prices across 6 online store sales channels.\nSuccess Rate: 100%'
-  },
-  {
-    id: 'n6',
-    title: 'Database Maintenance Warning',
-    message: 'System database load peaked at 92%. Performance degraded temporarily.',
-    type: 'warning',
-    timestamp: '2026-07-24T08:00:00Z',
-    read: true,
-    details: 'CPU load warning on postgres-primary.\nDatabase engine memory consumption: 81%\nDisk I/O writes: 1,202 IOPS\nAutovacuum daemon was automatically triggered to optimize table spacing.'
-  }
-]
+const mockNotificationData: NotificationItem[] = []
 
 export const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotificationData)
@@ -79,20 +24,55 @@ export const Notifications: React.FC = () => {
   const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    )
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setNotifications(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err)
+    }
   }
 
-  const handleMarkAllRead = () => {
+  React.useEffect(() => {
+    fetchNotifications()
+  }, [])
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { method: 'PUT' })
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+      )
+    } catch (err) {
+      console.error('Failed to mark notification read:', err)
+    }
+  }
+
+  const handleMarkAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
-  const handleDelete = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
-    if (selectedNotif?.id === id) {
-      setSelectedNotif(null)
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${id}`, { method: 'DELETE' })
+      setNotifications(prev => prev.filter(n => n.id !== id))
+      if (selectedNotif?.id === id) {
+        setSelectedNotif(null)
+      }
+    } catch (err) {
+      console.error('Failed to delete notification:', err)
+    }
+  }
+
+  const handleClearAll = async () => {
+    try {
+      await fetch('http://localhost:5000/api/notifications/clear-all', { method: 'DELETE' })
+      setNotifications([])
+    } catch (err) {
+      console.error('Failed to clear notifications:', err)
     }
   }
 
