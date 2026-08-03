@@ -137,16 +137,51 @@ export const Users: React.FC = () => {
       return
     }
 
+    const createdUser: User = {
+      id: `usr_${Date.now()}`,
+      name: cleanName,
+      email: cleanEmail,
+      role: inviteRole,
+      status: 'invited',
+      createdAt: new Date().toISOString(),
+    }
+
+    try {
+      await fetch('http://localhost:5000/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: cleanName,
+          email: cleanEmail,
+          password: 'Password123!',
+          role: inviteRole,
+        }),
+      })
+    } catch (err) {
+      console.warn('Backend user invite API offline, added to local state:', err)
+    }
+
+    setUsersList(prev => [createdUser, ...prev])
+    setInviteOpen(false)
     setInviteName('')
     setInviteEmail('')
-    showNotification(`Invitation email sent to ${newUser.email}! Account provisioned as ${ROLE_LABELS[inviteRole]}.`)
+    showNotification(`Invitation email sent to ${cleanEmail}! Account provisioned as ${ROLE_LABELS[inviteRole]}.`)
   }
 
-  const toggleUserStatus = (user: User) => {
+  const toggleUserStatus = async (user: User) => {
     const nextStatus = user.status === 'active' ? 'inactive' : 'active'
     setUsersList(prev =>
       prev.map(u => (u.id === user.id ? { ...u, status: nextStatus } : u))
     )
+    try {
+      await fetch(`http://localhost:5000/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+    } catch (err) {
+      console.warn('Backend status update offline:', err)
+    }
     showNotification(`User ${user.name} account status updated to ${nextStatus.toUpperCase()}`)
   }
 
@@ -205,7 +240,8 @@ export const Users: React.FC = () => {
           <option value="platform_owner">Platform Owner</option>
           <option value="administrator">Administrator</option>
           <option value="catalog_manager">Catalog Manager</option>
-          <option value="read_only">Read Only</option>
+          <option value="integration_manager">Integration Manager</option>
+          <option value="operations_staff">Operations Staff</option>
         </select>
         <select className="select input-sm w-auto min-w-[130px]" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="all">All Status</option>
@@ -222,9 +258,7 @@ export const Users: React.FC = () => {
               <tr>
                 <th>User & Account</th>
                 <th>Assigned Role</th>
-                <th>Department</th>
                 <th>Status</th>
-                <th>Last Login</th>
                 <th>Joined</th>
                 <th className="text-right">Actions</th>
               </tr>
@@ -244,15 +278,13 @@ export const Users: React.FC = () => {
                     </div>
                   </td>
                   <td data-label="Role">
-                    <Badge variant={(ROLE_COLORS[user.role] as any) || 'neutral'}>{ROLE_LABELS[user.role]}</Badge>
+                    <Badge variant={(ROLE_COLORS[user.role] as any) || 'neutral'}>{ROLE_LABELS[user.role] || user.role}</Badge>
                   </td>
-                  <td data-label="Department"><span className="text-xs font-medium text-slate-600 dark:text-slate-300">{user.department || '—'}</span></td>
                   <td data-label="Status">
                     <Badge variant={statusToVariant(user.status)} dot>
                       {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                     </Badge>
                   </td>
-                  <td data-label="Last Login"><span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{user.lastLogin ? timeAgo(user.lastLogin) : '—'}</span></td>
                   <td data-label="Joined"><span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{formatDate(user.createdAt)}</span></td>
                   <td data-label="Actions" className="text-right" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">

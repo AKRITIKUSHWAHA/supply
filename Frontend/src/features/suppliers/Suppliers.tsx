@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus,
@@ -65,6 +65,19 @@ export const Suppliers: React.FC = () => {
 
   // Action Menu Dropdown state
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const actionMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close action menu when clicking outside
+  useEffect(() => {
+    if (!openMenuId) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [openMenuId])
 
   // Sync All loader state
   const [isSyncingAll, setIsSyncingAll] = useState(false)
@@ -476,7 +489,7 @@ export const Suppliers: React.FC = () => {
                           <RefreshCw size={14} className={isSyncingThis ? 'animate-spin text-primary-600 dark:text-primary-400' : ''} />
                         </button>
 
-                        <div className="relative">
+                        <div className="relative" ref={isMenuOpen ? actionMenuRef : null}>
                           <button
                             onClick={() => setOpenMenuId(isMenuOpen ? null : supplier.id)}
                             className="btn-icon"

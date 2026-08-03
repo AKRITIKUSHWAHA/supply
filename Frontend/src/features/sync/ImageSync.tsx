@@ -423,7 +423,6 @@ export const ImageSync: React.FC = () => {
         {/* Main Image Asset Table (No Raw URLs Exposed Directly - Replaced with Action Suite) */}
         <div className="table-container w-full overflow-x-auto scrollbar-thin">
           <table className="table min-w-[1000px] w-full">
-            header
             <thead>
               <tr className="bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800">
                 <th className="whitespace-nowrap px-4 py-3.5">PRODUCT TITLE</th>
