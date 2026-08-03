@@ -244,7 +244,7 @@
       box-sizing: border-box !important;
       box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.06);
       transition: all 0.2s ease;
-      overflow: hidden !important;
+      overflow: visible !important;
     }
 
     .table tbody tr:hover {
@@ -272,6 +272,24 @@
       max-width: 58%;
       word-break: normal !important;
       overflow-wrap: break-word !important;
+    }
+
+    /* Avatar icons & badge icons in mobile table rows - strict sizing to prevent stretching */
+    .table tbody td .w-8,
+    .table tbody td .w-9,
+    .table tbody td .w-10,
+    .table tbody td [class*="bg-gradient-aurora"],
+    .table tbody td .shadow-glow-primary {
+      width: 2.25rem !important;
+      height: 2.25rem !important;
+      min-width: 2.25rem !important;
+      min-height: 2.25rem !important;
+      max-width: 2.25rem !important;
+      max-height: 2.25rem !important;
+      flex: 0 0 2.25rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
     .table tbody td span:not(.badge),
@@ -316,6 +334,14 @@
       justify-content: flex-end !important;
       flex-wrap: wrap !important;
       gap: 0.375rem !important;
+    }
+
+    .table tbody td .card,
+    .table tbody td [class*="shadow-"] {
+      max-width: 11rem !important;
+      width: 11rem !important;
+      word-break: normal !important;
+      z-index: 60 !important;
     }
 
     .table tbody td button,

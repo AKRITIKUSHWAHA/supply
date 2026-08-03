@@ -251,7 +251,7 @@ export const Users: React.FC = () => {
         </select>
       </FilterBar>
 
-      <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <div className="card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
         <div className="table-container">
           <table className="table">
             <thead>
@@ -267,13 +267,16 @@ export const Users: React.FC = () => {
               {filtered.map(user => (
                 <tr key={user.id} className="cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-850/50 transition-colors" onClick={() => setViewProfileUser(user)}>
                   <td data-label="User">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-aurora flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-glow-primary">
-                        {getInitials(user.name)}
-                      </div>
-                      <div>
+                    <div className="flex items-center justify-end gap-3 text-right">
+                      <div className="text-right">
                         <p className="font-bold text-slate-800 dark:text-slate-100 text-sm hover:text-primary-600 transition-colors">{user.name}</p>
                         <p className="text-2xs text-slate-400 dark:text-slate-400 font-mono">{user.email}</p>
+                      </div>
+                      <div
+                        style={{ width: '36px', height: '36px', minWidth: '36px', minHeight: '36px', flex: '0 0 36px' }}
+                        className="rounded-xl bg-gradient-aurora inline-flex items-center justify-center text-white text-xs font-black shadow-glow-primary"
+                      >
+                        {getInitials(user.name)}
                       </div>
                     </div>
                   </td>
