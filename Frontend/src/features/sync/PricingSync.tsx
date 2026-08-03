@@ -235,6 +235,19 @@ export const PricingSync: React.FC = () => {
     setDateFilter('all')
   }
 
+  const formatSyncTimestamp = (raw: string) => {
+    if (!raw || raw === 'Just now') return 'Just now'
+    try {
+      const d = new Date(raw)
+      if (!isNaN(d.getTime())) {
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        const isToday = new Date().toDateString() === d.toDateString()
+        return isToday ? `Today, ${timeStr}` : `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear().toString().slice(2)} ${timeStr}`
+      }
+    } catch {}
+    return raw
+  }
+
   return (
     <div className="relative space-y-6">
       {/* Toast Notification Banner */}
@@ -288,14 +301,16 @@ export const PricingSync: React.FC = () => {
           { label: 'Avg Catalog Margin', value: `${avgMargin}%`, color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50', trend: 'Calculated margin' },
           { label: 'Pending Price Updates', value: `${pendingUpdatesCount} SKUs`, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50/80 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50', trend: 'Awaiting sync' },
           { label: 'Active Rules', value: activeRulesCount.toString(), color: 'text-primary-700 dark:text-primary-400', bg: 'bg-primary-50/80 dark:bg-primary-950/30 border border-primary-100 dark:border-primary-900/50', trend: 'Formulas active' },
-          { label: 'Last Price Sync', value: latestSyncTime, color: 'text-slate-800 dark:text-slate-200', bg: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800', trend: 'Latest update' },
+          { label: 'Last Price Sync', value: formatSyncTimestamp(latestSyncTime), rawValue: latestSyncTime, color: 'text-slate-800 dark:text-slate-200', bg: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800', trend: 'Latest update' },
         ].map(s => (
-          <div key={s.label} className={`card p-2.5 sm:p-4 border ${s.bg}`}>
-            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold mb-1 leading-tight">{s.label}</p>
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-0.5 sm:gap-1">
-              <p className={`text-base sm:text-2xl font-black ${s.color} whitespace-nowrap leading-tight`}>{s.value}</p>
-              {s.trend && <span className="text-[9px] sm:text-2xs text-slate-500 dark:text-slate-400 font-medium leading-tight">{s.trend}</span>}
+          <div key={s.label} className={`card p-3 sm:p-4 border ${s.bg} flex flex-col justify-between gap-1.5`}>
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold leading-tight">{s.label}</p>
+              {s.trend && <span className="text-[9px] sm:text-2xs text-slate-400 dark:text-slate-500 font-medium leading-tight shrink-0">{s.trend}</span>}
             </div>
+            <p className={`text-sm sm:text-base lg:text-lg font-bold ${s.color} leading-tight`} title={s.rawValue || s.value}>
+              {s.value}
+            </p>
           </div>
         ))}
       </div>

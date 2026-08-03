@@ -401,7 +401,7 @@ export const Suppliers: React.FC = () => {
       </FilterBar>
 
       {/* Table */}
-      <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <div className="card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
         <div className="table-container">
           <table className="table">
             <thead>
@@ -440,7 +440,9 @@ export const Suppliers: React.FC = () => {
                 return (
                   <tr
                     key={supplier.id}
-                    className="cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
+                    className={`cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
+                      isMenuOpen ? 'relative z-40' : 'relative z-0'
+                    }`}
                     onClick={() => setSelected(supplier)}
                   >
                     <td data-label="Supplier">
@@ -478,8 +480,8 @@ export const Suppliers: React.FC = () => {
                         <Badge variant="success">Clean</Badge>
                       )}
                     </td>
-                    <td data-label="Actions" className="text-right sm:text-right">
-                      <div className="flex items-center justify-end gap-1 relative" onClick={e => e.stopPropagation()}>
+                    <td data-label="Actions" className={`text-right sm:text-right ${isMenuOpen ? 'z-50 relative' : ''}`}>
+                      <div className={`flex items-center justify-end gap-1 relative ${isMenuOpen ? 'z-50' : ''}`} onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => handleSyncSingle(supplier.id, supplier.name)}
                           disabled={isSyncingThis}
@@ -489,7 +491,7 @@ export const Suppliers: React.FC = () => {
                           <RefreshCw size={14} className={isSyncingThis ? 'animate-spin text-primary-600 dark:text-primary-400' : ''} />
                         </button>
 
-                        <div className="relative" ref={isMenuOpen ? actionMenuRef : null}>
+                        <div className={`relative ${isMenuOpen ? 'z-50' : ''}`} ref={isMenuOpen ? actionMenuRef : null}>
                           <button
                             onClick={() => setOpenMenuId(isMenuOpen ? null : supplier.id)}
                             className="btn-icon"
@@ -500,7 +502,7 @@ export const Suppliers: React.FC = () => {
 
                           {/* Popover Action Menu */}
                           {isMenuOpen && (
-                            <div className="absolute right-0 top-8 w-44 card shadow-card-lg z-50 p-1 text-left text-xs space-y-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                            <div className="absolute right-0 top-9 w-44 card shadow-2xl z-50 p-1 text-left text-xs space-y-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                               <button
                                 onClick={() => { setSelected(supplier); setOpenMenuId(null); }}
                                 className="w-full px-3 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 text-slate-700 dark:text-slate-200"
