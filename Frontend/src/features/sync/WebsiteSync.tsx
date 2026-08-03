@@ -93,7 +93,7 @@ export const WebsiteSync: React.FC = () => {
   // Handlers for Synchronization Actions
   
   // 1. Sync Selected Stores
-  const handleSyncSelectedStores = () => {
+  const handleSyncSelectedStores = async () => {
     if (selectedStoreIds.length === 0) return
     const selectedCount = selectedStoreIds.length
     showNotification(`Synchronizing ${selectedCount} selected storefront(s)...`)
@@ -106,50 +106,41 @@ export const WebsiteSync: React.FC = () => {
       )
     )
 
-    setTimeout(() => {
-      setStoresList(prev =>
-        prev.map(s =>
-          selectedStoreIds.includes(s.id)
-            ? {
-                ...s,
-                syncStatus: 'synced',
-                connectionStatus: 'connected',
-                lastSuccessSync: 'Just now',
-                productsPublished: s.totalProducts,
-                lastFailedSync: null,
-              }
-            : s
-        )
-      )
+    try {
+      await Promise.all(selectedStoreIds.map(id => 
+        fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
+      ));
+      await fetchStores();
       setSelectedStoreIds([])
       showNotification(`${selectedCount} storefront(s) published & synchronized successfully!`)
-    }, 2000)
+    } catch (err) {
+      console.error(err)
+      showNotification('Error syncing stores')
+    }
   }
 
   // 2. Sync All Stores
-  const handleSyncAllStores = () => {
+  const handleSyncAllStores = async () => {
     setSyncingAll(true)
     showNotification('Initiating catalog synchronization for all connected storefronts...')
     setStoresList(prev => prev.map(s => ({ ...s, syncStatus: 'syncing' })))
 
-    setTimeout(() => {
-      setStoresList(prev =>
-        prev.map(s => ({
-          ...s,
-          syncStatus: 'synced',
-          connectionStatus: 'connected',
-          lastSuccessSync: 'Just now',
-          productsPublished: s.totalProducts,
-          lastFailedSync: null,
-        }))
-      )
-      setSyncingAll(false)
+    try {
+      const storeIds = storesList.map(s => s.id);
+      await Promise.all(storeIds.map(id => 
+        fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
+      ));
+      await fetchStores();
       showNotification('All connected storefronts synchronized successfully!')
-    }, 2200)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSyncingAll(false)
+    }
   }
 
   // 3. Retry Failed Syncs
-  const handleRetryFailedSyncs = () => {
+  const handleRetryFailedSyncs = async () => {
     const failedList = storesList.filter(s => s.syncStatus === 'failed')
     if (failedList.length === 0) return
 
@@ -160,50 +151,33 @@ export const WebsiteSync: React.FC = () => {
       )
     )
 
-    setTimeout(() => {
-      setStoresList(prev =>
-        prev.map(s =>
-          s.syncStatus === 'syncing'
-            ? {
-                ...s,
-                syncStatus: 'synced',
-                connectionStatus: 'connected',
-                lastSuccessSync: 'Just now',
-                productsPublished: s.totalProducts,
-                lastFailedSync: null,
-              }
-            : s
-        )
-      )
+    try {
+      await Promise.all(failedList.map(store => 
+        fetch(`http://localhost:5000/api/stores/${store.id}/sync`, { method: 'POST' })
+      ));
+      await fetchStores();
       showNotification('Failed storefront synchronization retried and completed successfully!')
-    }, 2000)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   // 4. Single Store Sync / Retry
-  const handleSyncSingleStore = (id: string, name: string) => {
+  const handleSyncSingleStore = async (id: string, name: string) => {
     setSyncingStoreId(id)
     setStoresList(prev =>
       prev.map(s => (s.id === id ? { ...s, syncStatus: 'syncing' } : s))
     )
 
-    setTimeout(() => {
-      setStoresList(prev =>
-        prev.map(s =>
-          s.id === id
-            ? {
-                ...s,
-                syncStatus: 'synced',
-                connectionStatus: 'connected',
-                lastSuccessSync: 'Just now',
-                productsPublished: s.totalProducts,
-                lastFailedSync: null,
-              }
-            : s
-        )
-      )
-      setSyncingStoreId(null)
+    try {
+      await fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
+      await fetchStores()
       showNotification(`Catalog published & synced successfully for "${name}"!`)
-    }, 1500)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSyncingStoreId(null)
+    }
   }
 
   // Save Store Settings

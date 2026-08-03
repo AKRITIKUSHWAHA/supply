@@ -6,7 +6,8 @@ import {
   deleteSupplier,
   syncSupplier,
   syncAllSuppliers,
-  testSupplierConnection
+  testSupplierConnection,
+  testNewConnection
 } from '../controllers/supplier.controller';
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.put('/:id', updateSupplier);
 router.delete('/:id', deleteSupplier);
 router.post('/:id/sync', syncSupplier);
 router.post('/sync-all', syncAllSuppliers);
+router.post('/test-connection', testNewConnection);
 router.post('/:id/test', testSupplierConnection);
 
 export default router;

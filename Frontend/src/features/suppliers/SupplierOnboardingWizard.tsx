@@ -50,13 +50,30 @@ export const SupplierOnboardingWizard: React.FC = () => {
     autoPublish: false,
   })
 
-  const runConnectionTest = () => {
+  const runConnectionTest = async () => {
     setIsTesting(true)
     setTestSuccess(false)
-    setTimeout(() => {
+    try {
+      const res = await fetch('http://localhost:5000/api/suppliers/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          connectionType: formData.connectionType,
+          apiUrl: formData.apiUrl,
+          ftpHost: formData.ftpHost
+        })
+      })
+      if (res.ok) {
+        setTestSuccess(true)
+      } else {
+        alert('Connection test failed')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Connection test failed: Network error')
+    } finally {
       setIsTesting(false)
-      setTestSuccess(true)
-    }, 1500)
+    }
   }
 
   const handleNext = () => {

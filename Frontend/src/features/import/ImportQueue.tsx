@@ -27,9 +27,16 @@ const MOCK_PREVIEW_RECORDS: SampleRecord[] = [
 ]
 
 export const ImportQueue: React.FC = () => {
-  const [importsList, setImportsList] = useState<ImportJob[]>(mockImportQueue)
+  const [importsList, setImportsList] = useState<ImportJob[]>([])
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('all')
+
+  React.useEffect(() => {
+    fetch('http://localhost:5000/api/imports')
+      .then(res => res.json())
+      .then(data => setImportsList(Array.isArray(data) ? data : []))
+      .catch(console.error)
+  }, [])
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [previewItem, setPreviewItem] = useState<ImportJob | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -51,96 +58,95 @@ export const ImportQueue: React.FC = () => {
     }
   }
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsUploading(true)
     showNotification('Parsing supplier feed & validating schema...')
 
-    setTimeout(() => {
-      const newJob: ImportJob = {
-        id: `job_${Date.now()}`,
-        supplierId: 's1',
-        supplierName: supplierName,
-        connectionType: fileFormat === 'CSV' ? 'csv' : fileFormat === 'XML' ? 'xml' : 'excel',
-        fileName: uploadedFileName || `feed_${Date.now()}.${fileFormat.toLowerCase()}`,
-        totalRecords: 1250,
-        processedRecords: 450,
-        failedRecords: 0,
-        status: 'processing',
-        createdAt: new Date().toISOString(),
-      }
-
+    try {
+      const res = await fetch('http://localhost:5000/api/imports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierName,
+          fileFormat,
+          fileName: uploadedFileName || `feed_${Date.now()}.${fileFormat.toLowerCase()}`
+        })
+      })
+      const newJob = await res.json()
       setImportsList([newJob, ...importsList])
-      setIsUploading(false)
       setUploadModalOpen(false)
       setUploadedFileName(null)
       showNotification(`Import job for ${supplierName} queued successfully (1,250 SKUs parsed)!`)
-    }, 1200)
+    } catch (err) {
+      console.error(err)
+      showNotification('Failed to upload feed')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
-  const handleRetry = (id: string, sName: string) => {
-    setImportsList(prev =>
-      prev.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              status: 'processing',
-              errorMessage: undefined,
-              processedRecords: Math.floor(item.totalRecords * 0.4),
-            }
-          : item
-      )
-    )
+  const handleRetry = async (id: string, sName: string) => {
     showNotification(`Retrying import feed for ${sName}...`)
-
-    setTimeout(() => {
-      setImportsList(prev =>
-        prev.map(item =>
-          item.id === id
-            ? {
-                ...item,
-                status: 'completed',
-                processedRecords: item.totalRecords,
-                failedRecords: 0,
-              }
-            : item
-        )
-      )
+    try {
+      const res = await fetch(`http://localhost:5000/api/imports/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'completed',
+          processedRecords: 1250,
+          failedRecords: 0,
+          errorMessage: null
+        })
+      })
+      const updated = await res.json()
+      setImportsList(prev => prev.map(item => item.id === id ? updated : item))
       showNotification(`Import for ${sName} completed successfully!`)
-    }, 2000)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  const handleRetryAllFailed = () => {
+  const handleRetryAllFailed = async () => {
     showNotification('Re-queueing all failed feed imports...')
-    setTimeout(() => {
-      setImportsList(prev =>
-        prev.map(item =>
-          item.status === 'failed'
-            ? { ...item, status: 'completed', processedRecords: item.totalRecords, failedRecords: 0, errorMessage: undefined }
-            : item
-        )
-      )
-      showNotification('All failed feed imports ingested successfully!')
-    }, 1800)
+    const failedImports = importsList.filter(i => i.status === 'failed')
+    for (const job of failedImports) {
+      try {
+        const res = await fetch(`http://localhost:5000/api/imports/${job.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            processedRecords: job.totalRecords,
+            failedRecords: 0,
+            errorMessage: null
+          })
+        })
+        const updated = await res.json()
+        setImportsList(prev => prev.map(item => item.id === job.id ? updated : item))
+      } catch (err) { console.error(err) }
+    }
+    showNotification('All failed feed imports ingested successfully!')
   }
 
   const handleSetHighPriority = (id: string, sName: string) => {
     showNotification(`Prioritized feed import batch for ${sName} to top of queue!`)
   }
 
-  const handleCancel = (id: string, sName: string) => {
-    setImportsList(prev =>
-      prev.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              status: 'failed',
-              errorMessage: 'Cancelled by administrator.',
-            }
-          : item
-      )
-    )
-    showNotification(`Import for ${sName} cancelled.`)
+  const handleCancel = async (id: string, sName: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/imports/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'failed',
+          errorMessage: 'Cancelled by administrator.',
+        })
+      })
+      const updated = await res.json()
+      setImportsList(prev => prev.map(item => item.id === id ? updated : item))
+      showNotification(`Import for ${sName} cancelled.`)
+    } catch (err) { console.error(err) }
   }
 
   const handleExportQueueCSV = () => {

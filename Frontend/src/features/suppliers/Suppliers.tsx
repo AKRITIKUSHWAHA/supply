@@ -802,14 +802,27 @@ const SupplierDetail: React.FC<{
 
   const tabs = ['overview', 'connection', 'credentials', 'history', 'errors']
 
-  const handleTestConnection = () => {
+  const handleTestConnection = async () => {
     setIsTesting(true)
     setTestResult(null)
-    setTimeout(() => {
-      setIsTesting(false)
-      setTestResult('Connection Successful! HTTP 200 OK — Auth Validated.')
-      onNotify(`Connection test passed for ${supplier.name}`)
-    }, 1500)
+    
+    try {
+      const res = await fetch(`http://localhost:5000/api/suppliers/${supplier.id}/test`, { method: 'POST' });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setTestResult('Connection Successful! HTTP 200 OK — Auth Validated.');
+        onNotify(`Connection test passed for ${supplier.name}`);
+      } else {
+        setTestResult(`Connection Failed: ${data.error || 'Unknown error'}`);
+        onNotify(`Connection test failed for ${supplier.name}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setTestResult('Connection Failed: Network error');
+    } finally {
+      setIsTesting(false);
+    }
   }
 
   return (

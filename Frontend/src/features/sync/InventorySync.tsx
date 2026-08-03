@@ -121,58 +121,36 @@ export const InventorySync: React.FC = () => {
   // --- Handlers for Sync Workflows ---
 
   // 1. Sync All Stock Now
-  const handleSyncAll = () => {
+  const handleSyncAll = async () => {
     setSyncingAll(true)
     showNotification('Initiating global inventory stock sync for all connected suppliers...')
 
-    setItems(prev =>
-      prev.map(item => ({ ...item, syncStatus: 'Syncing' }))
-    )
-
-    setTimeout(() => {
-      setItems(prev =>
-        prev.map(item => {
-          const buffer = Math.max(0, item.buffer)
-          const available = Math.max(0, item.supplierStock - buffer)
-          return {
-            ...item,
-            storefrontStock: available,
-            syncStatus: 'Synced',
-            lastSync: 'Just now',
-            updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          }
-        })
-      )
+    try {
+      const res = await fetch('http://localhost:5000/api/sync/inventory', { method: 'POST' })
+      if (res.ok) {
+        await fetchInventory()
+        showNotification('Global Inventory Stock Sync completed successfully!')
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
       setSyncingAll(false)
-      showNotification('Global Inventory Stock Sync completed successfully!')
-    }, 1800)
+    }
   }
 
   // 2. Single SKU Sync / Retry
-  const handleSyncSingle = (id: string, name: string) => {
+  const handleSyncSingle = async (id: string, name: string) => {
     setSyncingItemId(id)
-    setItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, syncStatus: 'Syncing' } : item))
-    )
 
-    setTimeout(() => {
-      setItems(prev =>
-        prev.map(item => {
-          if (item.id !== id) return item
-          const buffer = Math.max(0, item.buffer)
-          const available = Math.max(0, item.supplierStock - buffer)
-          return {
-            ...item,
-            storefrontStock: available,
-            syncStatus: 'Synced',
-            lastSync: 'Just now',
-            updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          }
-        })
-      )
-      setSyncingItemId(null)
+    try {
+      await fetch('http://localhost:5000/api/sync/inventory', { method: 'POST' })
+      await fetchInventory()
       showNotification(`Stock levels synchronized successfully for "${name}"!`)
-    }, 1400)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSyncingItemId(null)
+    }
   }
 
   // Global Buffer Configuration

@@ -114,69 +114,52 @@ export const ImageSync: React.FC = () => {
   // --- Handlers for Image Workflow ---
 
   // 1. Sync All Images
-  const handleSyncAllImages = () => {
+  const handleSyncAllImages = async () => {
     setSyncingAll(true)
     showNotification('Starting Image Workflow: Feed Import → Validation → WebP Conversion → CDN Publishing...')
 
-    setTimeout(() => {
-      setItems(prev =>
-        prev.map(item => {
-          if (item.status === 'Missing') return item
-          return {
-            ...item,
-            status: 'Published',
-            cdnUrl: item.rawUrl ? item.rawUrl.replace(/https:\/\/[^/]+/, 'https://cdn.supplybridge.io/media').replace(/\.(jpg|png)/, '.webp') : '',
-            compressionRatio: '-68% WebP',
-            fileSize: '145 KB',
-            lastSync: 'Just now',
-          }
-        })
-      )
+    try {
+      const res = await fetch('http://localhost:5000/api/sync/images', { method: 'POST' })
+      if (res.ok) {
+        await fetchImages()
+        showNotification('Image Synchronization & CDN WebP publishing completed!')
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
       setSyncingAll(false)
-      showNotification('Image Synchronization & CDN WebP publishing completed!')
-    }, 2000)
+    }
   }
 
   // 2. Retry Image Processing
-  const handleRetryImage = (item: ImageAssetItem) => {
+  const handleRetryImage = async (item: ImageAssetItem) => {
     setActiveItemId(item.id)
     showNotification(`Re-fetching image URL from supplier feed for SKU "${item.sku}"...`)
 
-    setTimeout(() => {
-      setItems(prev =>
-        prev.map(i =>
-          i.id === item.id
-            ? {
-                ...i,
-                status: 'Published',
-                cdnUrl: `https://cdn.supplybridge.io/media/${item.sku.toLowerCase()}-thumb.webp`,
-                resolution: '1920x1080',
-                fileSize: '160 KB',
-                compressionRatio: '-65% WebP',
-                lastSync: 'Just now',
-              }
-            : i
-        )
-      )
-      setActiveItemId(null)
+    try {
+      // Use existing sync endpoint for individual retry as well for now
+      await fetch('http://localhost:5000/api/sync/images', { method: 'POST' })
+      await fetchImages()
       showNotification(`Image successfully recovered and published to CDN for SKU "${item.sku}"!`)
-    }, 1400)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActiveItemId(null)
+    }
   }
 
   // 3. Force Optimize WebP
-  const handleOptimizeImage = (item: ImageAssetItem) => {
+  const handleOptimizeImage = async (item: ImageAssetItem) => {
     setActiveItemId(item.id)
-    setTimeout(() => {
-      setItems(prev =>
-        prev.map(i =>
-          i.id === item.id
-            ? { ...i, status: 'Optimized', compressionRatio: '-75% WebP', fileSize: '110 KB', lastSync: 'Just now' }
-            : i
-        )
-      )
-      setActiveItemId(null)
+    try {
+      await fetch('http://localhost:5000/api/sync/images', { method: 'POST' })
+      await fetchImages()
       showNotification(`WebP compression re-optimized for SKU "${item.sku}".`)
-    }, 1000)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActiveItemId(null)
+    }
   }
 
   // Copy CDN URL

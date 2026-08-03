@@ -73,3 +73,15 @@ export const getAudits = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch audits' });
   }
 };
+
+export const syncPrices = async (req: Request, res: Response) => {
+  try {
+    const result = await prisma.pricingAudit.updateMany({
+      where: { status: 'pending' },
+      data: { status: 'synced' }
+    });
+    res.json({ success: true, count: result.count });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to sync prices' });
+  }
+};

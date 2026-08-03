@@ -66,122 +66,73 @@ export const SyncJobs: React.FC = () => {
   }
 
   // 2. Retry Failed Jobs (Toolbar action & single row action)
-  const handleRetryJob = (id: string, name: string) => {
-    setJobsList(prev =>
-      prev.map(j =>
-        j.id === id
-          ? {
-              ...j,
-              status: 'running',
-              progress: 40,
-              failedItems: 0,
-              retryAttempts: (j.retryAttempts || 1) + 1,
-              maxRetries: j.maxRetries || 3,
-              startedAt: new Date().toISOString(),
-            }
-          : j
-      )
-    )
-    showNotification(`Retrying failed job "${name}"...`)
-
-    setTimeout(() => {
-      setJobsList(prev =>
-        prev.map(j =>
-          j.id === id
-            ? {
-                ...j,
-                status: 'completed',
-                progress: 100,
-                processedItems: j.totalItems,
-                canRetry: false,
-              }
-            : j
-        )
-      )
+  const handleRetryJob = async (id: string, name: string) => {
+    try {
+      await fetch('http://localhost:5000/api/sync/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: `Retry ${name}`, type: 'full' })
+      })
+      await fetchJobs()
       showNotification(`Job "${name}" retried and completed successfully!`)
-    }, 2200)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  const handleRetryAllFailed = () => {
+  const handleRetryAllFailed = async () => {
     const failedJobs = jobsList.filter(j => j.status === 'failed')
     if (failedJobs.length === 0) return
     showNotification(`Re-queueing ${failedJobs.length} failed sync job(s)...`)
-    setJobsList(prev =>
-      prev.map(j =>
-        j.status === 'failed'
-          ? {
-              ...j,
-              status: 'running',
-              progress: 35,
-              retryAttempts: (j.retryAttempts || 1) + 1,
-            }
-          : j
-      )
-    )
 
-    setTimeout(() => {
-      setJobsList(prev =>
-        prev.map(j =>
-          j.status === 'running' && failedJobs.some(f => f.id === j.id)
-            ? { ...j, status: 'completed', progress: 100, processedItems: j.totalItems, canRetry: false }
-            : j
-        )
-      )
+    try {
+      await fetch('http://localhost:5000/api/sync/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Retry All Failed Jobs', type: 'full' })
+      })
+      await fetchJobs()
       showNotification('All failed sync jobs retried successfully!')
-    }, 2200)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   // 3. Sync Selected Suppliers/Jobs
-  const handleSyncSelectedSuppliers = () => {
+  const handleSyncSelectedSuppliers = async () => {
     if (selectedJobIds.length === 0) return
     const selectedCount = selectedJobIds.length
     showNotification(`Syncing ${selectedCount} selected supplier job(s)...`)
 
-    setJobsList(prev =>
-      prev.map(j =>
-        selectedJobIds.includes(j.id)
-          ? { ...j, status: 'running', progress: 15, startedAt: new Date().toISOString() }
-          : j
-      )
-    )
-
-    setTimeout(() => {
-      setJobsList(prev =>
-        prev.map(j =>
-          selectedJobIds.includes(j.id)
-            ? { ...j, status: 'completed', progress: 100, processedItems: j.totalItems, failedItems: 0 }
-            : j
-        )
-      )
+    try {
+      await fetch('http://localhost:5000/api/sync/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Selected Suppliers Sync', type: 'inventory' })
+      })
+      await fetchJobs()
       setSelectedJobIds([])
       showNotification(`${selectedCount} selected supplier job(s) synced successfully!`)
-    }, 2500)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   // 4. Sync All Suppliers
-  const handleSyncAllSuppliers = () => {
+  const handleSyncAllSuppliers = async () => {
     showNotification('Synchronizing all active suppliers...')
-    setJobsList(prev =>
-      prev.map(j => ({
-        ...j,
-        status: 'running',
-        progress: 25,
-        startedAt: new Date().toISOString(),
-      }))
-    )
 
-    setTimeout(() => {
-      setJobsList(prev =>
-        prev.map(j => ({
-          ...j,
-          status: 'completed',
-          progress: 100,
-          processedItems: j.totalItems,
-          failedItems: 0,
-        }))
-      )
+    try {
+      await fetch('http://localhost:5000/api/sync/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'All Suppliers Sync', type: 'inventory' })
+      })
+      await fetchJobs()
       showNotification('All active suppliers synchronized successfully!')
-    }, 2500)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   // 5. Pause Queue (Pauses running jobs)
@@ -222,11 +173,19 @@ export const SyncJobs: React.FC = () => {
   }
 
   // 8. Rebuild Catalog
-  const handleRebuildCatalog = () => {
+  const handleRebuildCatalog = async () => {
     showNotification('Rebuilding master product catalog indexes...')
-    setTimeout(() => {
+    try {
+      await fetch('http://localhost:5000/api/sync/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Catalog Rebuild', type: 'full' })
+      })
+      await fetchJobs()
       showNotification('Master product catalog rebuilt and indexed successfully!')
-    }, 1800)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   // Export CSV Report

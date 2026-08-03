@@ -95,20 +95,23 @@ export const PricingSync: React.FC = () => {
   const suppliersList = ['all', ...Array.from(new Set(auditRecords.map(r => r.supplier)))]
 
   // Sync Prices Action
-  const handleSyncPrices = () => {
+  const handleSyncPrices = async () => {
     setSyncing(true)
     showNotification('Initializing price update pipeline to storefronts...')
-    setTimeout(() => {
-      setAuditRecords(prev =>
-        prev.map(r =>
-          r.status === 'pending'
-            ? { ...r, status: 'synced', lastSync: 'Just now' }
-            : r
-        )
-      )
-      setSyncing(false)
-      showNotification(`Pricing synchronization complete! All pending storefront prices updated.`)
-    }, 1800)
+    try {
+      const res = await fetch('http://localhost:5000/api/pricing/sync', { method: 'POST' });
+      if (res.ok) {
+        // Fetch fresh data from backend
+        const freshData = await fetch('http://localhost:5000/api/pricing/audits').then(r => r.json());
+        setAuditRecords(freshData);
+        showNotification(`Pricing synchronization complete! All pending storefront prices updated.`)
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to sync prices');
+    } finally {
+      setSyncing(false);
+    }
   }
 
   // Pricing Rule Handlers
