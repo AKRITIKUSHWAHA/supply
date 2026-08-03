@@ -332,6 +332,7 @@ export const Dashboard: React.FC = () => {
     setAddCustomModalOpen(false)
     setNewWidgetLabel('')
     setNewWidgetValue('')
+    setNewWidgetChange('')
   }
 
   const handleApplyPreset = (preset: 'all' | 'compact' | 'defaults') => {
@@ -780,14 +781,14 @@ export const Dashboard: React.FC = () => {
               onClick={() => setAddCustomModalOpen(true)}
               className="btn-primary btn-xs flex items-center gap-1 font-bold shadow-sm cursor-pointer"
             >
-              <Plus size={13} /> Add Custom Tile (Bada Form)
+              <Plus size={13} /> Add Custom Tile
             </button>
           </div>
 
           {/* 2-Column Spacious Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Left Column: Reorderable Widget Manager List (7 Cols) */}
-            <div className="lg:col-span-7 space-y-2 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin">
+            <div className="lg:col-span-7 space-y-2 max-h-[440px] overflow-y-auto pr-3 scrollbar-thin">
               <p className="text-2xs font-extrabold uppercase tracking-wider text-slate-400 mb-2">
                 Tile List ({editingSettings.filter(w => w.visible).length} Visible / {editingSettings.length} Total) — Drag or use ▲▼ to reorder:
               </p>
@@ -803,7 +804,7 @@ export const Dashboard: React.FC = () => {
                     onDragStart={() => handleDragStart(index)}
                     onDragOver={handleDragOver}
                     onDrop={() => handleDrop(index)}
-                    className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all overflow-hidden ${
                       isBeingDragged ? 'opacity-40 border-dashed border-primary-500 bg-primary-50/20' : ''
                     } ${
                       item.visible
@@ -811,10 +812,10 @@ export const Dashboard: React.FC = () => {
                         : 'bg-slate-50/60 dark:bg-slate-950/40 border-slate-100 dark:border-slate-850 opacity-60'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       {/* Drag Handle */}
-                      <span className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 flex-shrink-0" title="Drag to reorder">
-                        <GripVertical size={16} />
+                      <span className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 flex-shrink-0" title="Drag to reorder">
+                        <GripVertical size={15} />
                       </span>
 
                       {/* Reorder Up/Down Buttons */}
@@ -840,35 +841,36 @@ export const Dashboard: React.FC = () => {
                       </div>
 
                       {/* Tile Icon & Title */}
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${cardInfo?.iconBg || 'bg-slate-100'}`}>
                           {cardInfo?.icon}
                         </div>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" title={item.label}>
                           {item.label}
                         </span>
                       </div>
                     </div>
 
                     {/* Size Selector & Show/Hide Controls */}
-                    <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto flex-shrink-0">
                       {/* Size selector pills */}
-                      <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                      <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg flex-shrink-0">
                         {[
                           { sizeKey: 'sm' as WidgetSize, label: 'Small' },
                           { sizeKey: 'md' as WidgetSize, label: 'Medium' },
                           { sizeKey: 'lg' as WidgetSize, label: 'Large' },
-                          { sizeKey: 'full' as WidgetSize, label: 'Full Width' },
+                          { sizeKey: 'full' as WidgetSize, label: 'Full' },
                         ].map(sz => (
                           <button
                             key={sz.sizeKey}
                             type="button"
                             onClick={() => handleSizeChange(item.id, sz.sizeKey)}
-                            className={`px-2 py-0.5 rounded text-2xs font-extrabold transition-all cursor-pointer ${
+                            className={`px-1.5 py-0.5 rounded text-2xs font-extrabold transition-all cursor-pointer ${
                               item.size === sz.sizeKey
                                 ? 'bg-amber-500 text-white shadow-xs'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                             }`}
+                            title={`Set size to ${sz.label}`}
                           >
                             {sz.label}
                           </button>
@@ -879,14 +881,14 @@ export const Dashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleToggleVisibility(item.id)}
-                        className={`btn-icon text-xs flex items-center gap-1 px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                        className={`px-2 py-1 rounded-lg text-2xs font-bold border transition-all cursor-pointer flex items-center gap-1 flex-shrink-0 ${
                           item.visible
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 font-bold'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400'
                             : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 font-normal'
                         }`}
                         title={item.visible ? 'Click to hide widget' : 'Click to show widget'}
                       >
-                        {item.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                        {item.visible ? <Eye size={12} /> : <EyeOff size={12} />}
                         <span className="text-2xs">{item.visible ? 'Visible' : 'Hidden'}</span>
                       </button>
 
@@ -894,10 +896,10 @@ export const Dashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDeleteWidget(item.id)}
-                        className="btn-icon text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 p-1.5 rounded-lg cursor-pointer"
+                        className="btn-icon text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 p-1 rounded-lg cursor-pointer flex-shrink-0"
                         title="Delete Tile"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
@@ -953,7 +955,7 @@ export const Dashboard: React.FC = () => {
                   onClick={() => setAddCustomModalOpen(true)}
                   className="w-full btn-primary btn-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer shadow-md shadow-amber-500/25"
                 >
-                  <Plus size={14} /> Build New Widget (Bada Form)
+                  <Plus size={14} /> Build New Widget
                 </button>
               </div>
             </div>
@@ -961,11 +963,11 @@ export const Dashboard: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Add Custom KPI Tile Modal (Bada Form - Widget Studio) */}
+      {/* Add Custom KPI Tile Modal (Widget Studio) */}
       <Modal
         open={addCustomModalOpen}
         onClose={() => setAddCustomModalOpen(false)}
-        title="Widget Studio — Create Custom KPI Telemetry Tile (Bada Form)"
+        title="Widget Studio — Create Custom KPI Telemetry Tile"
         subtitle="Configure custom telemetry metrics, data domain source, icon, color theme, and live card preview"
         size="xl"
       >
@@ -1059,22 +1061,36 @@ export const Dashboard: React.FC = () => {
                 </p>
 
                 {/* Simulated Card Output */}
-                <div className="kpi-card bg-white dark:bg-slate-900 border-amber-500/80 shadow-md">
-                  <div className="flex items-start justify-between">
-                    <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 flex items-center justify-center">
-                      <Activity size={16} className="text-amber-500" />
+                {(() => {
+                  const themeColors: Record<string, { bg: string; text: string; border: string }> = {
+                    emerald: { bg: 'bg-emerald-50 dark:bg-emerald-950/60', text: 'text-emerald-500', border: 'border-emerald-500/80' },
+                    blue: { bg: 'bg-blue-50 dark:bg-blue-950/60', text: 'text-blue-500', border: 'border-blue-500/80' },
+                    amber: { bg: 'bg-amber-50 dark:bg-amber-950/60', text: 'text-amber-500', border: 'border-amber-500/80' },
+                    violet: { bg: 'bg-violet-50 dark:bg-violet-950/60', text: 'text-violet-500', border: 'border-violet-500/80' },
+                    rose: { bg: 'bg-rose-50 dark:bg-rose-950/60', text: 'text-rose-500', border: 'border-rose-500/80' },
+                    cyan: { bg: 'bg-cyan-50 dark:bg-cyan-950/60', text: 'text-cyan-500', border: 'border-cyan-500/80' },
+                  }
+                  const activeTheme = themeColors[newWidgetColor] || themeColors.emerald
+
+                  return (
+                    <div className={`kpi-card bg-white dark:bg-slate-900 ${activeTheme.border} shadow-md transition-all`}>
+                      <div className="flex items-start justify-between">
+                        <div className={`w-8 h-8 rounded-lg ${activeTheme.bg} flex items-center justify-center`}>
+                          <Activity size={16} className={activeTheme.text} />
+                        </div>
+                        <span className="text-2xs font-semibold px-2 py-0.5 rounded-full text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900">
+                          {newWidgetChange || '+0%'}
+                        </span>
+                      </div>
+                      <div className="mt-3">
+                        <p className="kpi-label">{newWidgetLabel || 'Custom Tile Title'}</p>
+                        <p className="kpi-value text-xl font-black mt-1 text-slate-900 dark:text-slate-100">
+                          {newWidgetValue || '100%'}
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-2xs font-semibold px-2 py-0.5 rounded-full text-emerald-700 bg-emerald-50 border border-emerald-200">
-                      {newWidgetChange || '+0%'}
-                    </span>
-                  </div>
-                  <div className="mt-3">
-                    <p className="kpi-label">{newWidgetLabel || 'Custom Tile Title'}</p>
-                    <p className="kpi-value text-xl font-black mt-1 text-slate-900 dark:text-slate-100">
-                      {newWidgetValue || '100%'}
-                    </p>
-                  </div>
-                </div>
+                  )
+                })()}
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
