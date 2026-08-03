@@ -46,6 +46,7 @@ import logsRoutes from './routes/logs.routes';
 import notificationRoutes from './routes/notification.routes';
 import settingRoutes from './routes/setting.routes';
 import importRoutes from './routes/import.routes';
+import integrationRoutes from './routes/integration.routes';
 
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/products', productRoutes);
@@ -65,6 +66,7 @@ app.use('/api/logs', logsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/imports', importRoutes);
+app.use('/api/integrations', integrationRoutes);
 
 // Error handlers
 app.use(notFoundHandler);

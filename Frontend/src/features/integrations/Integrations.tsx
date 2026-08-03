@@ -21,47 +21,9 @@ interface IntegrationType {
   encoding?: string
 }
 
-const INITIAL_TYPES: IntegrationType[] = [
-  {
-    id: 'api', label: 'REST API Gateway', emoji: '🔌', color: 'from-primary-500 to-violet-600',
-    description: 'Connect via RESTful API endpoints with Bearer Token, OAuth2, or API Key authentication.',
-    activeCount: 8, features: ['Real-time Webhooks', 'OAuth 2.0 & Token Auth', 'Rate Limiting', 'JSON Schema Validation'],
-    timeoutSec: 30, rateLimitHr: 5000, retries: 3, schedule: 'Every 6 hours'
-  },
-  {
-    id: 'ftp', label: 'FTP Server Feed', emoji: '📁', color: 'from-blue-500 to-cyan-600',
-    description: 'Connect via standard FTP server to download automated supplier product feeds.',
-    activeCount: 6, features: ['Scheduled File Pulls', 'CSV & XML Feeds', 'Passive Transfer Mode', 'Auto-archiving'],
-    timeoutSec: 60, rateLimitHr: 2000, retries: 3, schedule: 'Every 12 hours'
-  },
-  {
-    id: 'sftp', label: 'Secure SFTP (SSH)', emoji: '🔐', color: 'from-violet-500 to-purple-700',
-    description: 'Encrypted file transfer via SSH protocol with key-based authentication or RSA keys.',
-    activeCount: 3, features: ['SSH Key Auth', 'Encrypted Transfers', 'Scheduled Pulls', 'PGP Decryption'],
-    timeoutSec: 60, rateLimitHr: 2000, retries: 3, schedule: 'Daily at midnight'
-  },
-  {
-    id: 'csv', label: 'CSV Feed Parser', emoji: '📄', color: 'from-emerald-500 to-teal-600',
-    description: 'Process CSV product files from URL endpoints or direct drag-and-drop file uploads.',
-    activeCount: 5, features: ['Custom Delimiters', 'Dynamic Column Mapping', 'Auto-detect Headers', 'UTF-8 & Latin1'],
-    timeoutSec: 45, rateLimitHr: 1000, retries: 2, schedule: 'Every 6 hours', delimiter: 'Comma (,)', encoding: 'UTF-8'
-  },
-  {
-    id: 'excel', label: 'Excel Import Engine', emoji: '📊', color: 'from-green-500 to-emerald-600',
-    description: 'Import supplier product data from Excel spreadsheets (.xlsx, .xls formats).',
-    activeCount: 2, features: ['Multi-sheet Parsing', 'Formula Evaluation', 'Column Auto-mapping', '.xlsx & .xls'],
-    timeoutSec: 45, rateLimitHr: 1000, retries: 2, schedule: 'Manual only', encoding: 'UTF-8'
-  },
-  {
-    id: 'xml', label: 'XML Feed Parser', emoji: '📋', color: 'from-amber-500 to-orange-600',
-    description: 'Parse structured XML product feeds from URLs or file uploads with XPath selector mapping.',
-    activeCount: 3, features: ['XPath Schema Mapping', 'Namespace Support', 'Scheduled Pulls', 'Streaming Parser'],
-    timeoutSec: 90, rateLimitHr: 1000, retries: 3, schedule: 'Every 12 hours', encoding: 'UTF-8'
-  },
-]
 
 export const Integrations: React.FC = () => {
-  const [typesList, setTypesList] = useState<IntegrationType[]>(INITIAL_TYPES)
+  const [typesList, setTypesList] = useState<IntegrationType[]>([])
   const [configOpen, setConfigOpen] = useState(false)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [selectedType, setSelectedType] = useState<IntegrationType | null>(null)
@@ -87,13 +49,20 @@ export const Integrations: React.FC = () => {
   const [newDesc, setNewDesc] = useState('')
 
   // Recent events state
-  const [events, setEvents] = useState([
-    { id: 'ev1', type: 'REST API', supplier: 'TechParts International', event: 'Connection handshake test successful (200 OK - 42ms)', time: 'Just now', ok: true },
-    { id: 'ev2', type: 'FTP', supplier: 'AcmeDistributors', event: 'Passive mode file transfer connection verified', time: '14 min ago', ok: true },
-    { id: 'ev3', type: 'XML Feed', supplier: 'PrimeSupply Corp', event: 'XML feed parser schema validation passed', time: '28 min ago', ok: true },
-    { id: 'ev4', type: 'REST API', supplier: 'NovaTech Supplies', event: 'Rate limit warning — 4800/5000 req/hr threshold', time: '1 hr ago', ok: false },
-    { id: 'ev5', type: 'SFTP', supplier: 'QuickShip LLC', event: 'SSH key-based authentication verified', time: '5 hr ago', ok: true },
-  ])
+  const [events, setEvents] = useState<any[]>([])
+
+  React.useEffect(() => {
+    fetchIntegrations()
+  }, [])
+
+  const fetchIntegrations = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/integrations')
+      const data = await res.json()
+      if (data.typesList) setTypesList(data.typesList)
+      if (data.events) setEvents(data.events)
+    } catch (err) { console.error('Failed to fetch integrations', err) }
+  }
 
   const showNotification = (msg: string) => {
     setToastMessage(msg)
@@ -113,77 +82,74 @@ export const Integrations: React.FC = () => {
     setConfigOpen(true)
   }
 
-  const handleSaveConfig = () => {
+  const handleSaveConfig = async () => {
     if (!selectedType) return
 
-    setTypesList(prev =>
-      prev.map(t => {
-        if (t.id === selectedType.id) {
-          return {
-            ...t,
-            timeoutSec: Number(configForm.timeoutSec),
-            rateLimitHr: Number(configForm.rateLimitHr),
-            retries: Number(configForm.retries),
-            schedule: configForm.schedule,
-            delimiter: configForm.delimiter,
-            encoding: configForm.encoding,
-          }
-        }
-        return t
+    try {
+      const res = await fetch(`http://localhost:5000/api/integrations/${selectedType.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timeoutSec: Number(configForm.timeoutSec),
+          rateLimitHr: Number(configForm.rateLimitHr),
+          retries: Number(configForm.retries),
+          schedule: configForm.schedule,
+          delimiter: configForm.delimiter,
+          encoding: configForm.encoding,
+        })
       })
-    )
-
-    setConfigOpen(false)
-    showNotification(`${selectedType.label} global parameters saved successfully!`)
+      const updated = await res.json()
+      setTypesList(prev => prev.map(t => t.id === selectedType.id ? updated : t))
+      setConfigOpen(false)
+      showNotification(`${selectedType.label} global parameters saved successfully!`)
+    } catch (err) {
+      console.error(err)
+      showNotification('Failed to save configuration')
+    }
   }
 
-  const handleTestProtocol = (type: IntegrationType) => {
+  const handleTestProtocol = async (type: IntegrationType) => {
     setTestingId(type.id)
-
-    setTimeout(() => {
-      setTestingId(null)
-      const newEvent = {
-        id: `ev_${Date.now()}`,
-        type: type.label,
-        supplier: 'System Protocol Handshake',
-        event: `${type.label} connection test passed — 200 OK (Latency: 38ms)`,
-        time: 'Just now',
-        ok: true,
+    try {
+      const res = await fetch(`http://localhost:5000/api/integrations/${type.id}/test`, { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setEvents([data.event, ...events])
+        showNotification(`${type.label} integration protocol test passed! Endpoint operational.`)
       }
-      setEvents([newEvent, ...events])
-      showNotification(`${type.label} integration protocol test passed! Endpoint operational.`)
-    }, 1200)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setTestingId(null)
+    }
   }
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newLabel.trim()) return
 
-    const newItem: IntegrationType = {
-      id: `custom_${Date.now()}`,
-      label: newLabel.trim(),
-      emoji: newType === 'api' ? '🔌' : newType === 'sftp' ? '🔐' : '📄',
-      color: 'from-indigo-600 to-cyan-600',
-      description: newDesc.trim() || 'Custom supplier integration protocol configuration',
-      activeCount: 1,
-      features: ['Custom Protocol', 'Token Auth', 'Scheduled Pulls', 'Schema Parser'],
-      timeoutSec: 45,
-      rateLimitHr: 2000,
-      retries: 3,
-      schedule: 'Every 6 hours',
+    try {
+      const res = await fetch('http://localhost:5000/api/integrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newLabel, newType, newDesc })
+      })
+      const newItem = await res.json()
+      setTypesList(prev => [...prev, newItem])
+      setAddModalOpen(false)
+      setNewLabel('')
+      setNewDesc('')
+      showNotification(`New integration protocol "${newItem.label}" created successfully!`)
+    } catch (err) {
+      console.error(err)
+      showNotification('Failed to create integration')
     }
-
-    setTypesList(prev => [...prev, newItem])
-    setAddModalOpen(false)
-    setNewLabel('')
-    setNewDesc('')
-    showNotification(`New integration protocol "${newItem.label}" created successfully!`)
   }
 
   const filteredTypes = typesList.filter(t => {
-    if (filterCategory === 'api') return t.id === 'api' || t.id.startsWith('custom')
-    if (filterCategory === 'ftp') return t.id === 'ftp' || t.id === 'sftp'
-    if (filterCategory === 'file') return t.id === 'csv' || t.id === 'excel' || t.id === 'xml'
+    if (filterCategory === 'api') return t.id.startsWith('api') || t.id.startsWith('custom') // fallback for old custom_ ids
+    if (filterCategory === 'ftp') return t.id.startsWith('ftp') || t.id.startsWith('sftp')
+    if (filterCategory === 'file') return t.id.startsWith('csv') || t.id.startsWith('excel') || t.id.startsWith('xml')
     return true
   })
 
@@ -210,7 +176,10 @@ export const Integrations: React.FC = () => {
         actions={
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button
-              onClick={() => showNotification('Integration status refreshed.')}
+              onClick={() => {
+                fetchIntegrations()
+                showNotification('Integration status refreshed.')
+              }}
               className="btn-secondary btn-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer"
             >
               <RefreshCw size={14} /> <span className="hidden sm:inline">Refresh Status</span><span className="sm:hidden">Refresh</span>
@@ -229,9 +198,9 @@ export const Integrations: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         {[
           { key: 'all',  label: 'Total Active', value: typesList.reduce((s, t) => s + t.activeCount, 0), color: 'text-primary-600 dark:text-primary-400', bg: 'bg-primary-50/40' },
-          { key: 'api',  label: 'REST APIs',     value: typesList.find(t => t.id === 'api')?.activeCount || 8,  color: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-50/40' },
-          { key: 'ftp',  label: 'FTP / SFTP',    value: (typesList.find(t => t.id === 'ftp')?.activeCount || 6) + (typesList.find(t => t.id === 'sftp')?.activeCount || 3),  color: 'text-cyan-600 dark:text-cyan-400',    bg: 'bg-cyan-50/40' },
-          { key: 'file', label: 'File Feeds',     value: (typesList.find(t => t.id === 'csv')?.activeCount || 5) + (typesList.find(t => t.id === 'excel')?.activeCount || 2) + (typesList.find(t => t.id === 'xml')?.activeCount || 3), color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50/40' },
+          { key: 'api',  label: 'REST APIs',     value: typesList.filter(t => t.id.startsWith('api') || t.id.startsWith('custom')).reduce((sum, t) => sum + (t.activeCount || 0), 0),  color: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-50/40' },
+          { key: 'ftp',  label: 'FTP / SFTP',    value: typesList.filter(t => t.id.startsWith('ftp') || t.id.startsWith('sftp')).reduce((sum, t) => sum + (t.activeCount || 0), 0),  color: 'text-cyan-600 dark:text-cyan-400',    bg: 'bg-cyan-50/40' },
+          { key: 'file', label: 'File Feeds',     value: typesList.filter(t => t.id.startsWith('csv') || t.id.startsWith('excel') || t.id.startsWith('xml')).reduce((sum, t) => sum + (t.activeCount || 0), 0), color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50/40' },
         ].map(s => (
           <div
             key={s.key}
