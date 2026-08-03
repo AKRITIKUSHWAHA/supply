@@ -574,3 +574,33 @@ model PricingAudit {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model IntegrationProtocol {
+  id            String   @id @default(uuid())
+  label         String
+  type          String   // e.g., api, ftp, sftp, csv, xml
+  emoji         String
+  color         String
+  description   String?  @db.Text
+  activeCount   Int      @default(0)
+  features      String   @db.Text // JSON string array
+  timeoutSec    Int      @default(30)
+  rateLimitHr   Int      @default(5000)
+  retries       Int      @default(3)
+  schedule      String   @default("Every 6 hours")
+  delimiter     String?
+  encoding      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model IntegrationEvent {
+  id            String   @id @default(uuid())
+  type          String
+  supplier      String
+  event         String   @db.Text
+  time          String
+  ok            Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
