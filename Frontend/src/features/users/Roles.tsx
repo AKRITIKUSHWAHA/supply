@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { mockRoles } from '../../data/mockData'
 import type { Role } from '../../types'
+import { useAuth } from '../../context/AuthContext'
 
 const ALL_MODULES = [
   { label: 'Dashboard', key: 'dashboard' },
@@ -46,6 +47,7 @@ const DEPARTMENTS = [
 ]
 
 export const Roles: React.FC = () => {
+  const { setBulkRolePermissions } = useAuth()
   const [rolesList, setRolesList] = useState<Role[]>([])
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -154,6 +156,9 @@ export const Roles: React.FC = () => {
       if (res.ok) {
         // Refresh the roles list from backend to get updated data
         await fetchRoles();
+        
+        // Update the AuthContext so changes reflect live in the dashboard!
+        setBulkRolePermissions(selectedRole.slug as any, formPerms);
         
         setEditOpen(false)
         setSelectedRole(null)

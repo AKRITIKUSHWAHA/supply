@@ -151,11 +151,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const { favorites, removeFavorite } = useFavorites()
 
   const visibleItems = NAV_ITEMS.filter(item => {
-    if (item.module && !hasPermission(item.module)) return false
     if (item.children) {
       const validChildren = item.children.filter(c => !c.module || hasPermission(c.module))
-      return validChildren.length > 0
+      if (validChildren.length > 0) return true
     }
+    if (item.module && !hasPermission(item.module)) return false
     return true
   })
 
