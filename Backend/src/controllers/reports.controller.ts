@@ -5,59 +5,28 @@ const prisma = new PrismaClient();
 
 export const getReportsData = async (req: Request, res: Response) => {
   try {
-    let suppliers = await prisma.supplier.findMany({
+    const suppliers = await prisma.supplier.findMany({
       include: { products: true, connections: true }
     });
 
-    if (suppliers.length === 0) {
-      try {
-        await prisma.supplier.create({ data: { name: 'TechParts International', company: 'TechParts Inc', email: 'api@techparts.com', status: 'active' } });
-        await prisma.supplier.create({ data: { name: 'GlobalSource Ltd.', company: 'GlobalSource Ltd', email: 'feed@globalsource.com', status: 'active' } });
-        await prisma.supplier.create({ data: { name: 'PrimeSupply Corp', company: 'PrimeSupply Corp', email: 'sales@primesupply.com', status: 'active' } });
-      } catch (e) { /* ignore duplicate seed */ }
-      suppliers = await prisma.supplier.findMany({
-        include: { products: true, connections: true }
-      });
-    }
-
-    const supplierData = suppliers.map((s, idx) => ({
+    const supplierData = suppliers.map((s) => ({
       name: s.name,
-      type: s.connections?.[0]?.type?.toUpperCase() || (idx === 0 ? 'REST API' : idx === 1 ? 'SFTP (CSV)' : 'FTP (XML)'),
-      products: s.products?.length || (idx === 0 ? 18420 : idx === 1 ? 14800 : 11200),
-      synced: s.products?.length || (idx === 0 ? 18420 : idx === 1 ? 14800 : 11200),
+      type: s.connections?.[0]?.type?.toUpperCase() || 'UNKNOWN',
+      products: s.products?.length || 0,
+      synced: s.products?.length || 0,
       errors: 0,
       passRate: 100,
-      uptime: '99.9%',
+      uptime: '100%',
     }));
 
-    let categories = await prisma.category.findMany({
+    const categories = await prisma.category.findMany({
       include: { products: true }
     });
 
-    if (categories.length === 0) {
-      try {
-        await prisma.category.create({ data: { name: 'Processors (CPUs)', slug: 'processors-cpus' } });
-        await prisma.category.create({ data: { name: 'Graphics Cards (GPUs)', slug: 'graphics-cards-gpus' } });
-        await prisma.category.create({ data: { name: 'Memory & Storage', slug: 'memory-storage' } });
-        await prisma.category.create({ data: { name: 'Components & Cooling', slug: 'components-cooling' } });
-      } catch (e) { /* ignore duplicate seed */ }
-      categories = await prisma.category.findMany({
-        include: { products: true }
-      });
-    }
-
-    let catalogPie = categories.map(c => ({
+    const catalogPie = categories.map(c => ({
       name: c.name,
       value: c.products?.length || 0,
     })).filter(c => c.value > 0);
-
-    if (catalogPie.length === 0) {
-      const totalProds = await prisma.product.count();
-      catalogPie = categories.map((c, idx) => ({
-        name: c.name,
-        value: totalProds > 0 ? Math.max(1, Math.floor(totalProds / categories.length)) : (idx === 0 ? 1420 : idx === 1 ? 2100 : idx === 2 ? 1150 : 850),
-      }));
-    }
 
     const validationLogs = await prisma.validationLog.findMany();
     const openErrors = validationLogs.filter(v => v.status === 'open').length;
@@ -68,34 +37,26 @@ export const getReportsData = async (req: Request, res: Response) => {
       : [{ name: 'Clean Catalog', value: 100 }];
 
     const syncJobs = await prisma.jobLog.findMany({ take: 6, orderBy: { createdAt: 'desc' } });
-    const syncTrend = syncJobs.length > 0
-      ? syncJobs.map((j, idx) => ({
-          month: `Run ${idx + 1}`,
-          success: j.status === 'completed' ? 100 : 0,
-          failed: j.status === 'failed' ? 100 : 0,
-          durationMin: 1,
-        }))
-      : [
-          { month: 'Jan', success: 98, failed: 2, durationMin: 1.2 },
-          { month: 'Feb', success: 99, failed: 1, durationMin: 1.1 },
-          { month: 'Mar', success: 97, failed: 3, durationMin: 1.4 },
-          { month: 'Apr', success: 100, failed: 0, durationMin: 0.9 },
-          { month: 'May', success: 99, failed: 1, durationMin: 1.0 },
-          { month: 'Jun', success: 100, failed: 0, durationMin: 0.8 },
-        ];
+    const syncTrend = syncJobs.map((j, idx) => ({
+      month: `Run ${idx + 1}`,
+      success: j.status === 'completed' ? 100 : 0,
+      failed: j.status === 'failed' ? 100 : 0,
+      durationMin: 1,
+    }));
 
     // Price changes from PricingAudit table
     const priceAudits = (prisma as any).pricingAudit ? await (prisma as any).pricingAudit.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
     }) : [];
+    
     const priceChanges = priceAudits.map((pa: any) => ({
-      sku: 'SKU-PRICE',
-      name: `Price Revision #${pa.id.slice(0, 6)}`,
-      supplier: 'Primary Supplier',
-      oldPrice: `$${pa.oldPrice}`,
-      newPrice: `$${pa.newPrice}`,
-      change: pa.newPrice > pa.oldPrice ? `+$${(pa.newPrice - pa.oldPrice).toFixed(2)}` : `-$${(pa.oldPrice - pa.newPrice).toFixed(2)}`,
+      sku: pa.sku || 'N/A',
+      name: pa.name || `Price Revision #${pa.id.slice(0, 6)}`,
+      supplier: pa.supplier || 'N/A',
+      oldPrice: pa.oldPrice != null ? `$${pa.oldPrice}` : '$0.00',
+      newPrice: pa.newPrice != null ? `$${pa.newPrice}` : '$0.00',
+      change: pa.newPrice > pa.oldPrice ? `+$${(pa.newPrice - pa.oldPrice).toFixed(2)}` : `-$${((pa.oldPrice || 0) - (pa.newPrice || 0)).toFixed(2)}`,
       date: new Date(pa.createdAt).toLocaleString(),
     }));
 
@@ -106,12 +67,12 @@ export const getReportsData = async (req: Request, res: Response) => {
       include: { product: true }
     });
     const inventoryChanges = invRecords.map(inv => ({
-      sku: inv.product?.sku || 'SKU-INV',
-      name: inv.product?.title || 'Catalog Product',
+      sku: inv.product?.sku || 'UNKNOWN',
+      name: inv.product?.title || 'Unknown Product',
       supplier: 'Primary Supplier',
-      oldStock: inv.quantity > 0 ? inv.quantity - 5 : 0,
+      oldStock: 0,
       newStock: inv.quantity,
-      change: `${inv.quantity >= 5 ? '+' : ''}${inv.quantity - 5} units`,
+      change: `${inv.quantity} units`,
       date: new Date(inv.updatedAt).toLocaleString(),
     }));
 

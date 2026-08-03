@@ -123,12 +123,15 @@ export const MediaLibrary: React.FC = () => {
   const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const objectUrl = URL.createObjectURL(file)
-      setUploadForm(prev => ({
-        ...prev,
-        imageUrl: objectUrl,
-        name: prev.name || file.name,
-      }))
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setUploadForm(prev => ({
+          ...prev,
+          imageUrl: reader.result as string,
+          name: prev.name || file.name,
+        }))
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -172,11 +175,14 @@ export const MediaLibrary: React.FC = () => {
   const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const objectUrl = URL.createObjectURL(file)
-      setEditForm(prev => ({
-        ...prev,
-        imageUrl: objectUrl,
-      }))
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setEditForm(prev => ({
+          ...prev,
+          imageUrl: reader.result as string,
+        }))
+      }
+      reader.readAsDataURL(file)
     }
   }
 
