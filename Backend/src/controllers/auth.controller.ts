@@ -3,6 +3,8 @@ import bcrypt from 'bcrypt';
 import prisma from '../utils/prisma';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { AppError } from '../utils/AppError';
+import { NotificationService } from '../services/notification.service';
+import { NotificationType, Severity } from '@prisma/client';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -25,6 +27,14 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         departmentId,
       },
     });
+
+    NotificationService.triggerEvent(
+      NotificationType.USER_CREATED,
+      'New User Registered',
+      `User ${user.name} (${user.email}) has registered.`,
+      Severity.INFO,
+      { userId: user.id }
+    ).catch(console.error);
 
     res.status(201).json({
       status: 'success',

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { runProductValidation } from '../utils/validationEngine';
+import { NotificationService } from '../services/notification.service';
+import { NotificationType, Severity } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -281,6 +283,15 @@ export const createProduct = async (req: Request, res: Response) => {
     // ── Run auto-validation engine after product is saved ──
     await runProductValidation(newProduct.id, prisma);
 
+    // Trigger Notification
+    NotificationService.triggerEvent(
+      NotificationType.PRODUCT_CREATED,
+      'New Product Created',
+      `Product ${newProduct.title} (SKU: ${newProduct.sku}) was added.`,
+      Severity.INFO,
+      { productId: newProduct.id, sku: newProduct.sku }
+    ).catch(console.error);
+
     res.status(201).json(formatted);
   } catch (error: any) {
     console.error('Error creating product:', error);
@@ -429,6 +440,15 @@ export const updateProduct = async (req: Request, res: Response) => {
     // ── Re-run auto-validation engine after product is updated ──
     await runProductValidation(id, prisma);
 
+    // Trigger Notification
+    NotificationService.triggerEvent(
+      NotificationType.PRODUCT_UPDATED,
+      'Product Updated',
+      `Product ${updatedProduct.title} (SKU: ${updatedProduct.sku}) was updated.`,
+      Severity.INFO,
+      { productId: updatedProduct.id, sku: updatedProduct.sku }
+    ).catch(console.error);
+
     res.json(formatted);
   } catch (error: any) {
     console.error('Error updating product:', error);
@@ -439,9 +459,24 @@ export const updateProduct = async (req: Request, res: Response) => {
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    
+    // Get product details before deleting for the notification
+    const product = await prisma.product.findUnique({ where: { id } });
+
     // Clean up validation logs for this product before deleting
     await prisma.validationLog.deleteMany({ where: { entityId: id, entityType: 'Product' } });
     await prisma.product.delete({ where: { id } });
+
+    if (product) {
+      NotificationService.triggerEvent(
+        NotificationType.PRODUCT_DELETED,
+        'Product Deleted',
+        `Product ${product.title} (SKU: ${product.sku}) was deleted.`,
+        Severity.WARNING,
+        { productId: product.id, sku: product.sku }
+      ).catch(console.error);
+    }
+
     res.json({ message: 'Product deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting product:', error);

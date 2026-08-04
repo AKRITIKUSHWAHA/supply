@@ -26,10 +26,16 @@ export const Notifications: React.FC = () => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/notifications')
-      const data = await res.json()
-      if (Array.isArray(data)) {
-        setNotifications(data)
+      const res = await fetch('http://localhost:5000/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
+        }
+      })
+      const result = await res.json()
+      if (result && Array.isArray(result.data)) {
+        setNotifications(result.data)
+      } else if (Array.isArray(result)) {
+        setNotifications(result)
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err)
@@ -38,13 +44,34 @@ export const Notifications: React.FC = () => {
 
   React.useEffect(() => {
     fetchNotifications()
+
+    const token = localStorage.getItem('supplybridge_token')
+    const eventSource = new EventSource(`http://localhost:5000/api/notifications/stream?token=${token}`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const newNotification = JSON.parse(event.data);
+        setNotifications(prev => [newNotification, ...prev]);
+      } catch (err) {
+        console.error('Error parsing SSE message', err);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, [])
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { method: 'PUT' })
+      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { 
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
+        }
+      })
       setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+        prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
       )
     } catch (err) {
       console.error('Failed to mark notification read:', err)
@@ -52,12 +79,27 @@ export const Notifications: React.FC = () => {
   }
 
   const handleMarkAllRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    try {
+      await fetch(`http://localhost:5000/api/notifications/read-all`, { 
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
+        }
+      })
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+    } catch (err) {
+      console.error('Failed to mark all read:', err)
+    }
   }
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}`, { method: 'DELETE' })
+      await fetch(`http://localhost:5000/api/notifications/${id}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
+        }
+      })
       setNotifications(prev => prev.filter(n => n.id !== id))
       if (selectedNotif?.id === id) {
         setSelectedNotif(null)
@@ -69,7 +111,12 @@ export const Notifications: React.FC = () => {
 
   const handleClearAll = async () => {
     try {
-      await fetch('http://localhost:5000/api/notifications/clear-all', { method: 'DELETE' })
+      await fetch('http://localhost:5000/api/notifications/clear-all', { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
+        }
+      })
       setNotifications([])
     } catch (err) {
       console.error('Failed to clear notifications:', err)
@@ -78,9 +125,12 @@ export const Notifications: React.FC = () => {
 
   const filtered = notifications.filter(n => {
     const matchSearch =
-      n.title.toLowerCase().includes(search.toLowerCase()) ||
-      n.message.toLowerCase().includes(search.toLowerCase())
-    const matchType = filterType === 'all' || n.type === filterType
+      n.title?.toLowerCase().includes(search.toLowerCase()) ||
+      n.message?.toLowerCase().includes(search.toLowerCase())
+    const matchType = filterType === 'all' || 
+      n.type?.toLowerCase() === filterType || 
+      n.severity?.toLowerCase() === filterType ||
+      (n as any).type === filterType;
     return matchSearch && matchType
   })
 
@@ -124,7 +174,7 @@ export const Notifications: React.FC = () => {
           <button
             onClick={handleMarkAllRead}
             className="btn-secondary btn-sm flex items-center gap-1.5 hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all duration-200 shadow-sm"
-            disabled={notifications.every(n => n.read)}
+            disabled={notifications.every((n: any) => n.isRead || n.read)}
           >
             <Check size={14} />
             Mark all read
@@ -136,9 +186,9 @@ export const Notifications: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Total Alerts', value: notifications.length, icon: <Bell size={16} className="text-primary-600" />, bg: 'bg-primary-50' },
-          { label: 'Critical Errors', value: notifications.filter(n => n.type === 'error').length, icon: <ShieldAlert size={16} className="text-rose-600" />, bg: 'bg-rose-50' },
-          { label: 'Warnings', value: notifications.filter(n => n.type === 'warning').length, icon: <AlertTriangle size={16} className="text-amber-600" />, bg: 'bg-amber-50' },
-          { label: 'Unread Messages', value: notifications.filter(n => !n.read).length, icon: <Info size={16} className="text-blue-600" />, bg: 'bg-blue-50' },
+          { label: 'Critical Errors', value: notifications.filter((n: any) => n.severity === 'ERROR' || n.severity === 'CRITICAL' || n.type === 'error').length, icon: <ShieldAlert size={16} className="text-rose-600" />, bg: 'bg-rose-50' },
+          { label: 'Warnings', value: notifications.filter((n: any) => n.severity === 'WARNING' || n.type === 'warning').length, icon: <AlertTriangle size={16} className="text-amber-600" />, bg: 'bg-amber-50' },
+          { label: 'Unread Messages', value: notifications.filter((n: any) => !n.isRead && !n.read).length, icon: <Info size={16} className="text-blue-600" />, bg: 'bg-blue-50' },
         ].map((card, idx) => (
           <div key={idx} className="card p-5 flex items-start justify-between">
             <div>
@@ -174,22 +224,22 @@ export const Notifications: React.FC = () => {
               <div
                 key={item.id}
                 className={`p-3.5 sm:p-5 flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 ${
-                  !item.read ? 'bg-primary-50/20 dark:bg-primary-950/20 border-l-2 border-primary-500' : 'border-l-2 border-transparent'
+                  !(item as any).isRead && !item.read ? 'bg-primary-50/20 dark:bg-primary-950/20 border-l-2 border-primary-500' : 'border-l-2 border-transparent'
                 }`}
               >
                 <div className="flex items-start gap-3 min-w-0 w-full flex-1">
-                  <div className="flex-shrink-0 mt-0.5">{getStatusIcon(item.type)}</div>
+                  <div className="flex-shrink-0 mt-0.5">{getStatusIcon((item as any).severity?.toLowerCase() || item.type)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <p className={`text-sm leading-snug ${!item.read ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-700 dark:text-slate-300 font-semibold'}`}>
+                      <p className={`text-sm leading-snug ${!(item as any).isRead && !item.read ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-700 dark:text-slate-300 font-semibold'}`}>
                         {item.title}
                       </p>
-                      <Badge variant={getBadgeVariant(item.type)}>{item.type}</Badge>
-                      {!item.read && <span className="w-1.5 h-1.5 rounded-full bg-primary-600 flex-shrink-0" />}
+                      <Badge variant={getBadgeVariant((item as any).severity?.toLowerCase() || item.type)}>{item.type}</Badge>
+                      {!(item as any).isRead && !item.read && <span className="w-1.5 h-1.5 rounded-full bg-primary-600 flex-shrink-0" />}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 leading-relaxed">{item.message}</p>
                     <p className="text-2xs font-mono text-slate-400 dark:text-slate-500">
-                      {format(new Date(item.timestamp), 'yyyy-MM-dd HH:mm:ss')}
+                      {item.timestamp ? format(new Date(item.timestamp), 'yyyy-MM-dd HH:mm:ss') : format(new Date((item as any).createdAt), 'yyyy-MM-dd HH:mm:ss')}
                     </p>
                   </div>
                 </div>
@@ -204,7 +254,7 @@ export const Notifications: React.FC = () => {
                   >
                     <Eye size={14} />
                   </button>
-                  {!item.read && (
+                  {!(item as any).isRead && !item.read && (
                     <button
                       onClick={() => handleMarkAsRead(item.id)}
                       className="btn-icon text-slate-400 hover:bg-emerald-600 hover:text-white transition-all duration-200"
@@ -241,11 +291,11 @@ export const Notifications: React.FC = () => {
         size="md"
         footer={
           <div className="flex gap-2 justify-end w-full">
-            {selectedNotif && !selectedNotif.read && (
+            {selectedNotif && !(selectedNotif as any).isRead && !selectedNotif.read && (
               <button
                 onClick={() => {
                   handleMarkAsRead(selectedNotif.id)
-                  setSelectedNotif(prev => prev ? { ...prev, read: true } : null)
+                  setSelectedNotif(prev => prev ? { ...prev, isRead: true, read: true } : null)
                 }}
                 className="btn-secondary btn-sm flex items-center gap-1.5"
               >
@@ -264,13 +314,13 @@ export const Notifications: React.FC = () => {
               <div>
                 <label className="text-xxs font-semibold text-slate-400 uppercase tracking-wider block">Timestamp</label>
                 <div className="font-mono text-slate-700 mt-1">
-                  {format(new Date(selectedNotif.timestamp), 'yyyy-MM-dd HH:mm:ss.SSS XXX')}
+                  {selectedNotif.timestamp ? format(new Date(selectedNotif.timestamp), 'yyyy-MM-dd HH:mm:ss.SSS XXX') : format(new Date((selectedNotif as any).createdAt), 'yyyy-MM-dd HH:mm:ss.SSS XXX')}
                 </div>
               </div>
               <div>
                 <label className="text-xxs font-semibold text-slate-400 uppercase tracking-wider block">Type</label>
                 <div className="mt-1">
-                  <Badge variant={getBadgeVariant(selectedNotif.type)}>{selectedNotif.type}</Badge>
+                  <Badge variant={getBadgeVariant((selectedNotif as any).severity?.toLowerCase() || selectedNotif.type)}>{selectedNotif.type}</Badge>
                 </div>
               </div>
             </div>

@@ -604,3 +604,80 @@ model IntegrationEvent {
   createdAt     DateTime @default(now())
 }
 
+// ==========================================
+// PHASE 5: NOTIFICATIONS
+// ==========================================
+
+enum NotificationType {
+  FAILED_SYNC
+  SUPPLIER_OFFLINE
+  API_ERROR
+  FTP_ERROR
+  INVENTORY_WARNING
+  NEW_PRODUCT
+  PRICE_CHANGE
+  VALIDATION_REQUIRED
+
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  PRODUCT_DELETED
+  SUPPLIER_ADDED
+  SUPPLIER_UPDATED
+  SUPPLIER_ONLINE
+  INVENTORY_UPDATED
+  INVENTORY_MISSING
+  PRICE_MISSING
+  MISSING_IMAGES
+  DUPLICATE_SKU
+  DUPLICATE_UPC
+  VALIDATION_PASSED
+  VALIDATION_FAILED
+  IMPORT_STARTED
+  IMPORT_COMPLETED
+  IMPORT_FAILED
+  SYNC_STARTED
+  SYNC_COMPLETED
+  SFTP_ERROR
+  SOAP_ERROR
+  STORE_CONNECTED
+  STORE_DISCONNECTED
+  QUEUE_STARTED
+  QUEUE_PAUSED
+  QUEUE_RESUMED
+  QUEUE_CANCELLED
+  PUBLISHING_STARTED
+  PUBLISHING_COMPLETED
+  PUBLISHING_FAILED
+  USER_CREATED
+  ROLE_UPDATED
+  PERMISSION_UPDATED
+  SYSTEM_ERROR
+  DATABASE_ERROR
+  SERVER_RESTART
+}
+
+enum Severity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  title       String
+  message     String           @db.Text
+  type        NotificationType
+  severity    Severity         @default(INFO)
+  status      String?          // Used if we need extra state
+  module      String?          // e.g., 'catalog', 'sync'
+  userId      String?          // Optional: for targeting specific users
+  role        String?          // Optional: for targeting specific roles
+  referenceId String?          // Related entity ID
+  actionUrl   String?          // URL to redirect on click
+  metadata    String?          @db.Text // JSON string for extra data
+  isRead      Boolean          @default(false)
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}

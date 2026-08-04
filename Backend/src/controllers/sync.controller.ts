@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, NotificationType, Severity } from '@prisma/client';
+import { NotificationService } from '../services/notification.service';
 
 const prisma = new PrismaClient();
 
@@ -61,6 +62,15 @@ export const createSyncJob = async (req: Request, res: Response) => {
       canRetry: false,
       logs: ['Job triggered manually', 'Pipeline completed cleanly'],
     });
+
+    NotificationService.triggerEvent(
+      NotificationType.SYNC_COMPLETED,
+      'Sync Completed',
+      `${type || 'Full Catalog'} sync was completed successfully.`,
+      Severity.INFO,
+      { jobId: job.id, type: type || 'full' }
+    ).catch(console.error);
+
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to trigger Sync Job' });
   }
@@ -98,6 +108,14 @@ export const triggerInventorySync = async (req: Request, res: Response) => {
     await prisma.inventory.updateMany({
       data: { status: 'in_stock', updatedAt: new Date() }
     });
+
+    NotificationService.triggerEvent(
+      NotificationType.INVENTORY_UPDATED,
+      'Inventory Sync',
+      'Inventory catalog synced cleanly across all storefronts.',
+      Severity.INFO
+    ).catch(console.error);
+
     res.json({ message: 'Inventory catalog synced cleanly across all storefronts' });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to sync inventory' });

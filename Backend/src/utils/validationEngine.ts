@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, NotificationType, Severity } from '@prisma/client';
+import { NotificationService } from '../services/notification.service';
 
 /**
  * Validation Engine
@@ -110,6 +111,15 @@ export async function runProductValidation(productId: string, prisma: PrismaClie
           });
         } catch (e) {}
       }
+
+      // Trigger a single notification for the product if it has issues
+      NotificationService.triggerEvent(
+        NotificationType.VALIDATION_REQUIRED,
+        'Validation Required',
+        `Product "${product.title}" (SKU: ${product.sku}) has ${issues.length} validation issue(s) that require attention.`,
+        Severity.WARNING,
+        { productId, issueCount: issues.length }
+      ).catch(console.error);
     }
   } catch (err) {
     // Non-fatal — validation failures should never break the main product save

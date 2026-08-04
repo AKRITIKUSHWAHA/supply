@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, NotificationType, Severity } from '@prisma/client';
+import { NotificationService } from '../services/notification.service';
 
 const prisma = new PrismaClient();
 
@@ -57,6 +58,15 @@ export const createStore = async (req: Request, res: Response) => {
       },
       include: { configurations: true }
     });
+
+    NotificationService.triggerEvent(
+      NotificationType.STORE_CONNECTED,
+      'Store Connected',
+      `Store ${newStore.name} (${newStore.type}) was connected successfully.`,
+      Severity.INFO,
+      { storeId: newStore.id }
+    ).catch(console.error);
+
     res.status(201).json(formatStore(newStore));
   } catch (error: any) {
     console.error('Error creating store:', error);
@@ -100,7 +110,20 @@ export const updateStore = async (req: Request, res: Response) => {
 export const deleteStore = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const store = await prisma.store.findUnique({ where: { id } });
+
     await prisma.store.delete({ where: { id } });
+
+    if (store) {
+      NotificationService.triggerEvent(
+        NotificationType.STORE_DISCONNECTED,
+        'Store Disconnected',
+        `Store ${store.name} was disconnected and deleted.`,
+        Severity.WARNING,
+        { storeId: store.id }
+      ).catch(console.error);
+    }
+
     res.json({ message: 'Store deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to delete Store' });

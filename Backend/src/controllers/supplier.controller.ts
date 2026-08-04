@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { NotificationService } from '../services/notification.service';
+import { NotificationType, Severity } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -99,6 +101,14 @@ export const createSupplier = async (req: Request, res: Response) => {
       }
     });
 
+    NotificationService.triggerEvent(
+      NotificationType.SUPPLIER_ADDED,
+      'New Supplier Added',
+      `Supplier ${supplier.name} (${supplier.company || 'N/A'}) was added to the platform.`,
+      Severity.INFO,
+      { supplierId: supplier.id }
+    ).catch(console.error);
+
     res.status(201).json(formatSupplier(supplier));
   } catch (error: any) {
     console.error('Error creating supplier:', error);
@@ -128,6 +138,26 @@ export const updateSupplier = async (req: Request, res: Response) => {
         credentials: true,
       }
     });
+
+    NotificationService.triggerEvent(
+      NotificationType.SUPPLIER_UPDATED,
+      'Supplier Updated',
+      `Details for supplier ${supplier.name} were updated.`,
+      Severity.INFO,
+      { supplierId: supplier.id }
+    ).catch(console.error);
+
+    if (supplier.status === 'offline' || supplier.status === 'error') {
+      NotificationService.triggerSupplierOffline(supplier.name).catch(console.error);
+    } else if (supplier.status === 'connected') {
+      NotificationService.triggerEvent(
+        NotificationType.SUPPLIER_ONLINE,
+        'Supplier Online',
+        `Supplier ${supplier.name} is now back online and connected.`,
+        Severity.INFO,
+        { supplierId: supplier.id }
+      ).catch(console.error);
+    }
 
     res.json(formatSupplier(supplier));
   } catch (error: any) {

@@ -134,12 +134,17 @@ export const Integrations: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newLabel, newType, newDesc })
       })
-      const newItem = await res.json()
-      setTypesList(prev => [...prev, newItem])
+      const data = await res.json()
+      if (data.item) {
+        setTypesList(prev => [data.item, ...prev])
+      }
+      if (data.event) {
+        setEvents(prev => [data.event, ...prev])
+      }
       setAddModalOpen(false)
       setNewLabel('')
       setNewDesc('')
-      showNotification(`New integration protocol "${newItem.label}" created successfully!`)
+      showNotification(`New integration protocol "${data.item?.label || newLabel}" created successfully!`)
     } catch (err) {
       console.error(err)
       showNotification('Failed to create integration')

@@ -19,6 +19,9 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       token = req.headers.authorization.split(' ')[1];
     } else if (req.cookies?.jwt) {
       token = req.cookies.jwt;
+    } else if (req.query.token) {
+      // For SSE EventSource which doesn't support headers natively
+      token = req.query.token as string;
     }
 
     if (!token) {

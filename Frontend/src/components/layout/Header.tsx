@@ -163,12 +163,53 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, darkMode, onToggleD
     navigate(path)
   }
 
-  const notifications = [
-    { id: 1, message: 'QuickShip sync failed — 256 items', time: '1 min ago', type: 'error' },
-    { id: 2, message: 'AcmeDistributors FTP connection error', time: '23 min ago', type: 'warning' },
-    { id: 3, message: 'Inventory sync completed — PrimeSup', time: '32 min ago', type: 'success' },
-    { id: 4, message: '5 products pending validation review', time: '1 hr ago', type: 'info' },
-  ]
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/notifications?limit=5', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}` }
+        })
+        const result = await res.json()
+        if (result && Array.isArray(result.data)) {
+          setNotifications(result.data)
+        } else if (Array.isArray(result)) {
+          setNotifications(result)
+        }
+        
+        const countRes = await fetch('http://localhost:5000/api/notifications/unread-count', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}` }
+        })
+        const countData = await countRes.json()
+        if (countData && typeof countData.count === 'number') {
+          setUnreadCount(countData.count)
+        }
+      } catch (err) {
+        console.error('Failed to fetch header notifications:', err)
+      }
+    }
+
+    fetchNotifications()
+
+    const token = localStorage.getItem('supplybridge_token');
+    const eventSource = new EventSource(`http://localhost:5000/api/notifications/stream?token=${token}`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const newNotification = JSON.parse(event.data);
+        setNotifications(prev => [newNotification, ...prev].slice(0, 5));
+        setUnreadCount(prev => prev + 1);
+      } catch (err) {
+        console.error('Error parsing SSE message in header', err);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [])
 
   return (
     <>
@@ -255,24 +296,28 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, darkMode, onToggleD
               title="Notifications"
             >
               <Bell size={18} />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
+              {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />}
             </button>
             {showNotifications && (
               <div className="fixed inset-x-3 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-10 sm:w-80 card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card-lg z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">Notifications</span>
-                  <span className="badge-danger">4 new</span>
+                  {unreadCount > 0 && <span className="badge-danger">{unreadCount} new</span>}
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
-                  {notifications.map(n => (
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-slate-400 text-xs">No notifications</div>
+                  ) : notifications.map(n => (
                     <Link
                       key={n.id}
                       to="/notifications"
                       onClick={() => setShowNotifications(false)}
-                      className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer block text-left"
+                      className={`px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer block text-left ${!n.isRead ? 'bg-primary-50/10' : ''}`}
                     >
-                      <p className="text-sm text-slate-700 dark:text-slate-200 leading-snug">{n.message}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{n.time}</p>
+                      <p className={`text-sm leading-snug ${!n.isRead ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-700 dark:text-slate-200'}`}>{n.title || n.message}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        {n.timestamp ? new Date(n.timestamp).toLocaleTimeString() : (n.createdAt ? new Date(n.createdAt).toLocaleTimeString() : n.time)}
+                      </p>
                     </Link>
                   ))}
                 </div>

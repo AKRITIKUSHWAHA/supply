@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, NotificationType, Severity } from '@prisma/client';
 import { runProductValidation } from '../utils/validationEngine';
+import { NotificationService } from '../services/notification.service';
 
 const prisma = new PrismaClient();
 
@@ -136,6 +137,14 @@ export const resolveProductValidation = async (req: Request, res: Response) => {
       data: { status: 'resolved', resolvedAt: new Date() },
     });
 
+    NotificationService.triggerEvent(
+      NotificationType.VALIDATION_PASSED,
+      'Validation Approved',
+      `Product ${productId} has passed validation and is approved.`,
+      Severity.INFO,
+      { productId }
+    ).catch(console.error);
+
     res.json({ message: 'Product approved — all validation issues resolved.' });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to approve product validation' });
@@ -154,6 +163,14 @@ export const rejectProductValidation = async (req: Request, res: Response) => {
       where: { entityId: productId, entityType: 'Product' },
       data: { status: 'rejected' },
     });
+
+    NotificationService.triggerEvent(
+      NotificationType.VALIDATION_FAILED,
+      'Validation Rejected',
+      `Product ${productId} was rejected due to validation failures.`,
+      Severity.WARNING,
+      { productId }
+    ).catch(console.error);
 
     res.json({ message: 'Product rejected — validation issues marked as rejected.' });
   } catch (error: any) {
