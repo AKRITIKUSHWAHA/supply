@@ -62,9 +62,11 @@ export const getSuppliers = async (req: Request, res: Response) => {
   }
 };
 
+import { ingestSupplierFeed } from '../services/feedParser.service';
+
 export const createSupplier = async (req: Request, res: Response) => {
   try {
-    const { name, code, contactName, contactEmail, contactPhone, website, country, connectionType, credentials, status } = req.body;
+    const { name, code, contactName, contactEmail, contactPhone, website, country, connectionType, credentials, status, fileContent, fileName } = req.body;
 
     const hasCreds = credentials && (credentials.apiKey || credentials.ftpUsername || credentials.apiUrl);
     const supplierName = name?.trim() || 'New Supplier';
@@ -101,6 +103,16 @@ export const createSupplier = async (req: Request, res: Response) => {
       }
     });
 
+    // If a CSV, XML, or Excel file feed was uploaded, ingest its products into DB
+    if (fileContent && typeof fileContent === 'string' && fileContent.trim()) {
+      ingestSupplierFeed(
+        supplier.id,
+        connectionType || 'csv',
+        fileName || `feed_${Date.now()}.${(connectionType || 'csv').toLowerCase()}`,
+        fileContent
+      ).catch(console.error);
+    }
+
     NotificationService.triggerEvent(
       NotificationType.SUPPLIER_ADDED,
       'New Supplier Added',
@@ -109,7 +121,13 @@ export const createSupplier = async (req: Request, res: Response) => {
       { supplierId: supplier.id }
     ).catch(console.error);
 
-    res.status(201).json(formatSupplier(supplier));
+    // Re-fetch populated supplier with products
+    const refreshed = await prisma.supplier.findUnique({
+      where: { id: supplier.id },
+      include: { products: true, connections: true, credentials: true }
+    });
+
+    res.status(201).json(formatSupplier(refreshed || supplier));
   } catch (error: any) {
     console.error('Error creating supplier:', error);
     res.status(500).json({ error: error.message || 'Failed to create Supplier' });

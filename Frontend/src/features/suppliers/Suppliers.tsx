@@ -20,7 +20,10 @@ import {
   Database,
   Globe,
   Activity,
-  Download
+  Download,
+  Upload,
+  FileSpreadsheet,
+  FolderUp
 } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { SectionHeader, FilterBar, EmptyState, ConfirmDialog, Select } from '../../components/ui'
@@ -99,6 +102,16 @@ export const Suppliers: React.FC = () => {
     ftpPassword: '',
   })
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      setSelectedFile(file)
+      showNotification(`Selected feed file: "${file.name}" from computer`)
+    }
+  }
+
   const showNotification = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3000)
@@ -160,6 +173,19 @@ export const Suppliers: React.FC = () => {
     }
 
     try {
+      let fileContent: string | undefined = undefined
+      let fileName: string | undefined = undefined
+
+      if (selectedFile) {
+        fileName = selectedFile.name
+        fileContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = e => resolve(e.target?.result as string || '')
+          reader.onerror = err => reject(err)
+          reader.readAsText(selectedFile)
+        })
+      }
+
       const res = await fetch('http://localhost:5000/api/suppliers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,6 +197,8 @@ export const Suppliers: React.FC = () => {
           country: newSupplier.country || 'United States',
           connectionType: newSupplier.connectionType,
           status: 'connected',
+          fileContent,
+          fileName,
           credentials: {
             apiUrl: newSupplier.apiUrl || undefined,
             apiKey: newSupplier.apiKey || undefined,
@@ -186,6 +214,7 @@ export const Suppliers: React.FC = () => {
       const created = await res.json()
       setSuppliersList(prev => [created, ...prev])
       setAddOpen(false)
+      setSelectedFile(null)
       setNewSupplier({
         name: '',
         code: '',
@@ -199,9 +228,10 @@ export const Suppliers: React.FC = () => {
         ftpUsername: '',
         ftpPassword: '',
       })
-      showNotification(`Supplier "${created.name}" created successfully!`)
+      showNotification(`Supplier "${created.name}" created and product feed ingested!`)
     } catch (err) {
       console.error('Failed to create supplier:', err)
+      showNotification('Failed to create supplier and process feed file')
     }
   }
 
@@ -405,21 +435,20 @@ export const Suppliers: React.FC = () => {
         <div className="table-container">
           <table className="table">
             <thead>
-              <tr className="bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800">
-                <th className="whitespace-nowrap px-4 py-3.5">SUPPLIER</th>
-                <th className="whitespace-nowrap px-4 py-3.5">CONNECTION</th>
-                <th className="whitespace-nowrap px-4 py-3.5">STATUS</th>
-                <th className="whitespace-nowrap px-4 py-3.5">PRODUCTS</th>
-                <th className="whitespace-nowrap px-4 py-3.5">LAST SYNC</th>
-                <th className="whitespace-nowrap px-4 py-3.5">NEXT SYNC</th>
-                <th className="whitespace-nowrap px-4 py-3.5">ERRORS</th>
-                <th className="whitespace-nowrap px-4 py-3.5 text-right pr-4">ACTIONS</th>
+              <tr className="bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400">
+                <th className="text-left whitespace-nowrap px-4 py-3.5">SUPPLIER</th>
+                <th className="text-center whitespace-nowrap px-4 py-3.5">CONNECTION</th>
+                <th className="text-center whitespace-nowrap px-4 py-3.5">STATUS</th>
+                <th className="text-center whitespace-nowrap px-4 py-3.5">PRODUCTS</th>
+                <th className="text-center whitespace-nowrap px-4 py-3.5">LAST SYNC</th>
+                <th className="text-center whitespace-nowrap px-4 py-3.5">ERRORS</th>
+                <th className="text-right whitespace-nowrap px-4 py-3.5 pr-4">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {paginatedSuppliers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-16 text-slate-400">
+                  <td colSpan={7} className="text-center py-16 text-slate-400">
                     <EmptyState
                       icon={<Plug size={24} />}
                       title="No suppliers found"
@@ -445,42 +474,39 @@ export const Suppliers: React.FC = () => {
                     }`}
                     onClick={() => setSelected(supplier)}
                   >
-                    <td data-label="Supplier">
-                      <div className="flex items-center justify-end gap-3 text-right">
-                        <div className="text-right">
-                          <p className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">{supplier.name}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-400 font-medium">{supplier.code} · {supplier.country}</p>
-                        </div>
-                        <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-950/60 border border-primary-100 dark:border-primary-900/60 flex items-center justify-center text-base flex-shrink-0">
+                    <td data-label="Supplier" className="px-4 py-3.5 text-left">
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-950/60 border border-primary-100 dark:border-primary-900/60 flex items-center justify-center text-base shrink-0 shadow-xs">
                           {connTypeIcon[supplier.connectionType]}
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug truncate">{supplier.name}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-400 font-medium">{supplier.code} · {supplier.country}</p>
                         </div>
                       </div>
                     </td>
-                    <td data-label="Connection">
+                    <td data-label="Connection" className="px-4 py-3.5 text-center">
                       <Badge variant="info">{connectionTypeLabel(supplier.connectionType)}</Badge>
                     </td>
-                    <td data-label="Status">
+                    <td data-label="Status" className="px-4 py-3.5 text-center">
                       <Badge variant={statusToVariant(supplier.status)} dot>
                         {supplier.status.charAt(0).toUpperCase() + supplier.status.slice(1)}
                       </Badge>
                     </td>
-                    <td data-label="Products">
+                    <td data-label="Products" className="px-4 py-3.5 text-center">
                       <span className="font-bold text-slate-800 dark:text-slate-200">{supplier.productCount.toLocaleString()}</span>
                     </td>
-                    <td data-label="Last Sync">
+                    <td data-label="Last Sync" className="px-4 py-3.5 text-center">
                       <span className="text-slate-600 dark:text-slate-300 text-xs font-medium">{supplier.lastSync ? timeAgo(supplier.lastSync) : '—'}</span>
                     </td>
-                    <td data-label="Next Sync">
-                      <span className="text-slate-600 dark:text-slate-300 text-xs font-medium">{supplier.nextSync ? formatDateTime(supplier.nextSync) : '—'}</span>
-                    </td>
-                    <td data-label="Errors">
+                    <td data-label="Errors" className="px-4 py-3.5 text-center">
                       {supplier.errorCount > 0 ? (
                         <Badge variant="danger">{supplier.errorCount} errors</Badge>
                       ) : (
                         <Badge variant="success">Clean</Badge>
                       )}
                     </td>
-                    <td data-label="Actions" className={`text-right sm:text-right ${isMenuOpen ? 'z-50 relative' : ''}`}>
+                    <td data-label="Actions" className={`px-4 py-3.5 text-right pr-4 ${isMenuOpen ? 'z-50 relative' : ''}`}>
                       <div className={`flex items-center justify-end gap-1 relative ${isMenuOpen ? 'z-50' : ''}`} onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => handleSyncSingle(supplier.id, supplier.name)}
@@ -678,9 +704,9 @@ export const Suppliers: React.FC = () => {
           )}
 
           {(newSupplier.connectionType === 'ftp' || newSupplier.connectionType === 'sftp') && (
-            <div className="bg-slate-50 rounded-xl p-4 space-y-3 border border-slate-200">
-              <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                <Database size={14} className="text-primary-600" /> FTP Server Config
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-3 border border-slate-200 dark:border-slate-700">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <Database size={14} className="text-primary-600 dark:text-primary-400" /> FTP Server Config
               </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
@@ -700,6 +726,83 @@ export const Suppliers: React.FC = () => {
                 onChange={e => setNewSupplier({ ...newSupplier, ftpUsername: e.target.value })}
               />
               <input className="input" placeholder="Password" type="password" />
+            </div>
+          )}
+
+          {(newSupplier.connectionType === 'csv' || newSupplier.connectionType === 'excel' || newSupplier.connectionType === 'xml') && (
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-3 border border-slate-200 dark:border-slate-700">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Upload size={14} className="text-primary-600 dark:text-primary-400" /> Select {newSupplier.connectionType.toUpperCase()} Feed File from Computer
+                </span>
+                <span className="text-2xs font-bold text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-900">
+                  .{newSupplier.connectionType === 'csv' ? 'csv' : newSupplier.connectionType === 'excel' ? 'xlsx / .xls' : 'xml'}
+                </span>
+              </p>
+
+              <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center bg-white dark:bg-slate-900 hover:border-primary-500 transition-colors">
+                <input
+                  type="file"
+                  id="supplier-feed-file-input"
+                  className="hidden"
+                  accept={
+                    newSupplier.connectionType === 'csv'
+                      ? '.csv,text/csv'
+                      : newSupplier.connectionType === 'excel'
+                      ? '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
+                      : '.xml,text/xml'
+                  }
+                  onChange={handleFileChange}
+                />
+                <label
+                  htmlFor="supplier-feed-file-input"
+                  className="cursor-pointer flex flex-col items-center justify-center gap-2 py-2"
+                >
+                  <div className="w-11 h-11 rounded-full bg-primary-50 dark:bg-primary-950/60 flex items-center justify-center text-primary-600 dark:text-primary-400 shadow-xs border border-primary-200/60 dark:border-primary-900/60">
+                    <Upload size={20} />
+                  </div>
+                  <div>
+                    <span className="btn-primary btn-sm inline-flex items-center gap-1.5 text-xs font-bold shadow-xs">
+                      <FolderUp size={14} /> Choose File from Computer
+                    </span>
+                    <span className="text-2xs text-slate-400 block mt-1.5">
+                      Select local .{newSupplier.connectionType === 'csv' ? 'csv' : newSupplier.connectionType === 'excel' ? 'xlsx / .xls' : 'xml'} file from your computer (Max 50MB)
+                    </span>
+                  </div>
+                </label>
+
+                {selectedFile && (
+                  <div className="mt-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 rounded-xl flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                      <FileSpreadsheet size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="font-bold text-slate-800 dark:text-slate-100 truncate">{selectedFile.name}</p>
+                        <p className="text-2xs text-slate-500 font-mono">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB · Ready for processing</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFile(null)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 shrink-0"
+                      title="Remove file"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-2xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                  Or enter Remote Feed Endpoint URL (Optional)
+                </label>
+                <input
+                  className="input text-xs"
+                  placeholder={`https://supplier.com/feeds/products.${newSupplier.connectionType === 'excel' ? 'xlsx' : newSupplier.connectionType}`}
+                  value={newSupplier.apiUrl}
+                  onChange={e => setNewSupplier({ ...newSupplier, apiUrl: e.target.value })}
+                />
+              </div>
             </div>
           )}
         </div>

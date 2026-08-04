@@ -228,13 +228,13 @@ export const StoreManagement: React.FC = () => {
               className="card p-5 hover:shadow-card-md transition-all flex flex-col justify-between border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
             >
               <div>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between gap-2 mb-4">
                   <div
-                    className="flex items-center gap-3 cursor-pointer"
+                    className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
                     onClick={() => setSelectedStore(store)}
                   >
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+                      className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border ${
                         store.status === 'active'
                           ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900/60'
                           : store.status === 'error'
@@ -253,30 +253,30 @@ export const StoreManagement: React.FC = () => {
                         }
                       />
                     </div>
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-slate-100 text-sm hover:text-primary-600 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-slate-900 dark:text-slate-100 text-sm hover:text-primary-600 transition-colors truncate" title={store.name}>
                         {store.name}
                       </p>
                       <p className="text-xs text-slate-400 dark:text-slate-400 font-medium">{store.platform}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 shrink-0 self-start">
                     <Badge variant={statusToVariant(store.syncStatus)} dot>
                       {store.syncStatus}
                     </Badge>
                     <button
                       onClick={e => handleOpenEdit(store, e)}
-                      className="btn-icon text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                      className="btn-icon p-1.5 rounded-lg text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                       title="Edit Store Settings"
                     >
-                      <Edit2 size={13} />
+                      <Edit2 size={14} />
                     </button>
                     <button
                       onClick={e => handleOpenDelete(store, e)}
-                      className="btn-icon text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                      className="btn-icon p-1.5 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                       title="Remove Store Connection"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>

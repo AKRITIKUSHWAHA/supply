@@ -228,17 +228,17 @@ interface ConfirmDialogProps {
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ open, onClose, onConfirm, title, message, confirmLabel = 'Confirm', danger }) => {
   return open ? (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-panel max-w-sm" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay p-4 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="modal-panel max-w-sm w-full mx-auto" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h3>
         </div>
-        <div className="modal-body">
-          <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
+        <div className="modal-body py-3">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{message}</p>
         </div>
-        <div className="modal-footer">
+        <div className="modal-footer flex justify-end gap-2 pt-3">
           <button onClick={onClose} className="btn-secondary btn-sm">Cancel</button>
-          <button onClick={onConfirm} className={danger ? 'btn-danger btn-sm' : 'btn-primary btn-sm'}>{confirmLabel}</button>
+          <button onClick={onConfirm} className={danger ? 'btn-danger btn-sm font-semibold' : 'btn-primary btn-sm font-semibold'}>{confirmLabel}</button>
         </div>
       </div>
     </div>
