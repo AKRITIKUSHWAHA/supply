@@ -13,11 +13,14 @@ model User {
   email         String         @unique
   password      String
   phone         String?
-  status        String         @default("active")
-  profileImage  String?
-  lastLogin     DateTime?
+  status              String         @default("active")
+  profileImage        String?
+  lastLogin           DateTime?
+  twoFactorSecret     String?
+  isTwoFactorEnabled  Boolean        @default(false)
+  passwordChangedAt   DateTime?
   
-  departmentId  String?
+  departmentId        String?
   department    Department?    @relation(fields: [departmentId], references: [id])
   
   roleId        String
@@ -93,14 +96,44 @@ model RefreshToken {
 }
 
 model ActivityLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action    String
-  details   String?  @db.Text
-  ipAddress String?
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  details     String?  @db.Text
+  entityType  String?
+  entityId    String?
+  oldData     String?  @db.Text
+  newData     String?  @db.Text
+  ipAddress   String?
   
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model IpWhitelist {
+  id          String   @id @default(uuid())
+  ipAddress   String   @unique
+  description String?
+  status      String   @default("active")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmailConfig {
+  id                String   @id @default(uuid())
+  provider          String   @default("SMTP") // SMTP, SENDGRID, SES, MICROSOFT365
+  host              String?
+  port              Int?     @default(587)
+  username          String?
+  encryptedPassword String?  @db.Text
+  apiKey            String?  @db.Text
+  fromEmail         String   @default("noreply@supplybridge.io")
+  fromName          String   @default("SupplyBridge Enterprise PIM")
+  status            String   @default("active")
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model SystemSetting {
@@ -235,6 +268,7 @@ model Product {
   prices            ProductPrice[]
   inventory         Inventory[]
   mappings          ProductMapping[]
+  storeMappings     ProductStoreMapping[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -376,16 +410,24 @@ model Inventory {
 model Store {
   id                String    @id @default(uuid())
   name              String
-  type              String    // shopify, magento, woocommerce, custom
+  type              String    // shopify, magento, woocommerce, shift4shop, custom
+  storeKey          String?   @unique // anchorage_med, anchorage_unlimited, etc.
+  autoRoutingRule   String?   @default("ALL") // ALL, MEDICAL_ONLY, RETAIL_ONLY, CUSTOM
   currency          String    @default("USD")
   language          String    @default("en")
   timezone          String    @default("UTC")
-  connectionStatus  String    @default("disconnected")
+  connectionStatus  String    @default("active")
   syncStatus        String    @default("idle")
   lastSync          DateTime?
   
+  inventoryCron     String?   @default("*/15 * * * *")
+  pricingCron       String?   @default("0 * * * *")
+  catalogCron       String?   @default("0 2 * * *")
+  imagesCron        String?   @default("0 0 * * *")
+  
   configurations    StoreConfiguration[]
   credentials       StoreCredential[]
+  productMappings   ProductStoreMapping[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -403,15 +445,35 @@ model StoreConfiguration {
 }
 
 model StoreCredential {
-  id                String    @id @default(uuid())
-  storeId           String
-  store             Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  apiKey            String?
-  secret            String?
-  accessToken       String?
+  id                  String    @id @default(uuid())
+  storeId             String
+  store               Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  apiKey              String?
+  secret              String?
+  accessToken         String?
+  encryptedApiKey     String?   @db.Text
+  encryptedSecret     String?   @db.Text
+  encryptedAccessToken String?  @db.Text
+  storeUrl            String?
   
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model ProductStoreMapping {
+  id                 String    @id @default(uuid())
+  productId          String
+  product            Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storeId            String
+  store              Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  remoteStorefrontId String?
+  syncStatus         String    @default("synced")
+  lastPushedAt       DateTime?
+  
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([productId, storeId])
 }
 
 // --- Data Mapping & Import Engine ---
@@ -654,6 +716,15 @@ enum NotificationType {
   SYSTEM_ERROR
   DATABASE_ERROR
   SERVER_RESTART
+
+  // Explicit Client Requirements
+  FAILED_IMPORT
+  SUPPLIER_CONNECTION_FAILURE
+  API_FAILURE
+  FTP_FAILURE
+  VALIDATION_ERROR
+  CRITICAL_SYSTEM_ERROR
+  SUCCESSFUL_SYNC
 }
 
 enum Severity {
@@ -681,3 +752,36 @@ model Notification {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 }
+
+model NotificationPreference {
+  id           String   @id @default(uuid())
+  userId       String?
+  role         String?
+  eventType    String   // e.g., FAILED_IMPORT, FAILED_SYNC, SUPPLIER_CONNECTION_FAILURE, etc.
+  emailEnabled Boolean  @default(true)
+  inAppEnabled Boolean  @default(true)
+  slackEnabled Boolean  @default(false)
+  teamsEnabled Boolean  @default(false)
+  smsEnabled   Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, role, eventType])
+}
+
+model ApiKey {
+  id              String    @id @default(uuid())
+  name            String
+  keyPrefix       String
+  encryptedSecret String    @db.Text
+  scopes          String    @default("read,write") // Comma separated or JSON string
+  status          String    @default("active")     // active, revoked, expired
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  createdBy       String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+

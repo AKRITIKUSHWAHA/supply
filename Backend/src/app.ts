@@ -12,6 +12,8 @@ import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler';
 
 const app: Application = express();
 
+import { checkMaintenanceMode } from './middleware/maintenance.middleware';
+
 // Security and utility middlewares
 app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));
@@ -19,6 +21,9 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
+
+// Global Maintenance Mode check for API routes
+app.use('/api', checkMaintenanceMode);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -47,6 +52,12 @@ import notificationRoutes from './routes/notification.routes';
 import settingRoutes from './routes/setting.routes';
 import importRoutes from './routes/import.routes';
 import integrationRoutes from './routes/integration.routes';
+import apikeyRoutes from './routes/apikey.routes';
+import securityRoutes from './routes/security.routes';
+import { checkIpWhitelist } from './middleware/ipWhitelist.middleware';
+
+// Global IP Whitelist check for API routes
+app.use('/api', checkIpWhitelist);
 
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/products', productRoutes);
@@ -67,6 +78,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/imports', importRoutes);
 app.use('/api/integrations', integrationRoutes);
+app.use('/api/apikeys', apikeyRoutes);
+app.use('/api/security', securityRoutes);
 
 // Error handlers
 app.use(notFoundHandler);

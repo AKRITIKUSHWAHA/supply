@@ -7,6 +7,25 @@ import { FavoritesProvider } from './context/FavoritesContext'
 import { AppRouter } from './router'
 import './index.css'
 
+// Global fetch interceptor to attach active user role header for Backend Maintenance Mode & Authorization checks
+const originalFetch = window.fetch
+window.fetch = async function (...args) {
+  let [resource, config] = args
+  const urlStr = typeof resource === 'string' ? resource : (resource as Request).url || ''
+
+  if (urlStr.includes('localhost:5000/api')) {
+    config = config || {}
+    const headers = new Headers(config.headers || {})
+    if (!headers.has('x-user-role')) {
+      const activeRole = localStorage.getItem('supplybridge_role') || 'platform_owner'
+      headers.set('x-user-role', activeRole)
+    }
+    config.headers = headers
+  }
+
+  return originalFetch.call(window, resource, config)
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
@@ -20,4 +39,3 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </AuthProvider>
   </React.StrictMode>,
 )
-

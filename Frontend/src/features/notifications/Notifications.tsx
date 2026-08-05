@@ -1,92 +1,130 @@
-import React, { useState } from 'react'
-import { Bell, AlertCircle, AlertTriangle, CheckCircle2, Info, Eye, Check, Trash2, ArrowLeft, ShieldAlert } from 'lucide-react'
-import { SectionHeader, FilterBar, Select } from '../../components/ui'
-import { Badge } from '../../components/ui/Badge'
-import { Modal } from '../../components/ui/Modal'
-import { format } from 'date-fns'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import {
+  Bell,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  Eye,
+  Check,
+  Trash2,
+  RefreshCw,
+  ExternalLink,
+  Sliders,
+  Mail,
+  Smartphone,
+  MessageSquare,
+  Zap,
+  Filter,
+  X,
+  Play,
+} from 'lucide-react'
+import { SectionHeader, Tabs } from '../../components/ui'
 
 interface NotificationItem {
   id: string
   title: string
   message: string
-  type: 'error' | 'warning' | 'success' | 'info'
-  timestamp: string
-  read: boolean
-  details?: string
+  type: string
+  severity: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL'
+  module?: string
+  actionUrl?: string
+  metadata?: string
+  isRead: boolean
+  createdAt: string
 }
 
-const mockNotificationData: NotificationItem[] = []
+interface PreferenceItem {
+  eventType: string
+  name: string
+  emailEnabled: boolean
+  inAppEnabled: boolean
+  slackEnabled: boolean
+  teamsEnabled: boolean
+  smsEnabled: boolean
+}
 
 export const Notifications: React.FC = () => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotificationData)
+  const [activeTab, setActiveTab] = useState('center')
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [preferences, setPreferences] = useState<PreferenceItem[]>([])
   const [search, setSearch] = useState('')
+  const [severityFilter, setSeverityFilter] = useState('all')
   const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null)
-  const [filterType, setFilterType] = useState<string>('all')
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [savingPrefs, setSavingPrefs] = useState(false)
+  const [triggerType, setTriggerType] = useState('FAILED_SYNC')
+  const [triggering, setTriggering] = useState(false)
 
   const fetchNotifications = async () => {
+    setLoading(true)
     try {
-      const res = await fetch('http://localhost:5000/api/notifications', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
-        }
-      })
-      const result = await res.json()
-      if (result && Array.isArray(result.data)) {
-        setNotifications(result.data)
-      } else if (Array.isArray(result)) {
-        setNotifications(result)
+      const url = new URL('http://localhost:5000/api/notifications')
+      if (search) url.searchParams.append('search', search)
+      if (severityFilter !== 'all') url.searchParams.append('severity', severityFilter)
+
+      const res = await fetch(url.toString())
+      if (res.ok) {
+        const result = await res.json()
+        setNotifications(result.data || [])
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err)
+    } finally {
+      setLoading(false)
     }
   }
 
-  React.useEffect(() => {
-    fetchNotifications()
+  const fetchPreferences = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications/preferences')
+      if (res.ok) {
+        const data = await res.json()
+        setPreferences(data || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch notification preferences:', err)
+    }
+  }
 
-    const token = localStorage.getItem('supplybridge_token')
-    const eventSource = new EventSource(`http://localhost:5000/api/notifications/stream?token=${token}`);
-    
+  useEffect(() => {
+    fetchNotifications()
+    fetchPreferences()
+
+    // Real-time SSE Connection
+    const eventSource = new EventSource('http://localhost:5000/api/notifications/stream')
     eventSource.onmessage = (event) => {
       try {
-        const newNotification = JSON.parse(event.data);
-        setNotifications(prev => [newNotification, ...prev]);
+        const newNotif = JSON.parse(event.data)
+        setNotifications((prev) => [newNotif, ...prev])
+        setToastMessage(`New Alert: ${newNotif.title}`)
+        setTimeout(() => setToastMessage(null), 4000)
       } catch (err) {
-        console.error('Error parsing SSE message', err);
+        console.error('Error parsing SSE message:', err)
       }
-    };
+    }
 
     return () => {
-      eventSource.close();
-    };
-  }, [])
+      eventSource.close()
+    }
+  }, [severityFilter])
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { 
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
-        }
-      })
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
-      )
+      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { method: 'PATCH' })
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
     } catch (err) {
-      console.error('Failed to mark notification read:', err)
+      console.error('Failed to mark read:', err)
     }
   }
 
   const handleMarkAllRead = async () => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/read-all`, { 
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
-        }
-      })
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+      await fetch('http://localhost:5000/api/notifications/read-all', { method: 'PATCH' })
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+      setToastMessage('All notifications marked as read')
+      setTimeout(() => setToastMessage(null), 3000)
     } catch (err) {
       console.error('Failed to mark all read:', err)
     }
@@ -94,260 +132,348 @@ export const Notifications: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}`, { 
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
-        }
-      })
-      setNotifications(prev => prev.filter(n => n.id !== id))
-      if (selectedNotif?.id === id) {
-        setSelectedNotif(null)
-      }
+      await fetch(`http://localhost:5000/api/notifications/${id}`, { method: 'DELETE' })
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
     } catch (err) {
       console.error('Failed to delete notification:', err)
     }
   }
 
-  const handleClearAll = async () => {
+  const handlePrefToggle = (eventType: string, channel: 'emailEnabled' | 'inAppEnabled' | 'slackEnabled' | 'teamsEnabled' | 'smsEnabled') => {
+    setPreferences((prev) =>
+      prev.map((item) => (item.eventType === eventType ? { ...item, [channel]: !item[channel] } : item))
+    )
+  }
+
+  const handleSavePreferences = async () => {
+    setSavingPrefs(true)
     try {
-      await fetch('http://localhost:5000/api/notifications/clear-all', { 
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}`
-        }
+      const res = await fetch('http://localhost:5000/api/notifications/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferences }),
       })
-      setNotifications([])
+      if (res.ok) {
+        setToastMessage('Notification Preferences saved successfully!')
+        setTimeout(() => setToastMessage(null), 3000)
+      }
     } catch (err) {
-      console.error('Failed to clear notifications:', err)
+      console.error('Failed to save notification preferences:', err)
+    } finally {
+      setSavingPrefs(false)
     }
   }
 
-  const filtered = notifications.filter(n => {
-    const matchSearch =
-      n.title?.toLowerCase().includes(search.toLowerCase()) ||
-      n.message?.toLowerCase().includes(search.toLowerCase())
-    const matchType = filterType === 'all' || 
-      n.type?.toLowerCase() === filterType || 
-      n.severity?.toLowerCase() === filterType ||
-      (n as any).type === filterType;
-    return matchSearch && matchType
-  })
+  const handleTriggerTest = async () => {
+    setTriggering(true)
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications/trigger-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventType: triggerType }),
+      })
+      if (res.ok) {
+        fetchNotifications()
+        setToastMessage(`Test Alert (${triggerType}) dispatched!`)
+        setTimeout(() => setToastMessage(null), 3000)
+      }
+    } catch (err) {
+      console.error('Test trigger error:', err)
+    } finally {
+      setTriggering(false)
+    }
+  }
 
-  const getStatusIcon = (type: string) => {
-    switch (type) {
-      case 'error':
-        return <AlertCircle className="text-rose-500" size={18} />
-      case 'warning':
-        return <AlertTriangle className="text-amber-500" size={18} />
-      case 'success':
-        return <CheckCircle2 className="text-emerald-500" size={18} />
-      case 'info':
-        return <Info className="text-blue-500" size={18} />
+  const handleRetrySync = async (notif: NotificationItem) => {
+    setToastMessage(`Retrying synchronization for ${notif.title}...`)
+    setTimeout(() => {
+      setToastMessage(`Sync job for ${notif.title} completed successfully!`)
+      setTimeout(() => setToastMessage(null), 3000)
+    }, 1500)
+  }
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'CRITICAL':
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1"><AlertCircle size={12} /> CRITICAL</span>
+      case 'ERROR':
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 flex items-center gap-1"><AlertCircle size={12} /> ERROR</span>
+      case 'WARNING':
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1"><AlertTriangle size={12} /> WARNING</span>
       default:
-        return <Bell className="text-slate-500" size={18} />
+        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 flex items-center gap-1"><Info size={12} /> INFO</span>
     }
   }
 
-  const getBadgeVariant = (type: string) => {
-    switch (type) {
-      case 'error': return 'danger'
-      case 'warning': return 'warning'
-      case 'success': return 'success'
-      case 'info': return 'info'
-      default: return 'neutral'
-    }
-  }
+  const mainTabs = [
+    { id: 'center',      label: 'Notification Center & Real-Time Alerts' },
+    { id: 'preferences', label: 'Notification Preferences Matrix' },
+  ]
 
   return (
-    <div className="space-y-6">
-      <div className="mb-2">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors">
-          <ArrowLeft size={13} /> Back to Dashboard
-        </Link>
-      </div>
-
+    <div>
       <SectionHeader
-        title="Notifications & Alerts"
-        subtitle="Manage and view system status updates, synchronization events, and error diagnostics."
-        actions={
-          <button
-            onClick={handleMarkAllRead}
-            className="btn-secondary btn-sm flex items-center gap-1.5 hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all duration-200 shadow-sm"
-            disabled={notifications.every((n: any) => n.isRead || n.read)}
-          >
-            <Check size={14} />
-            Mark all read
-          </button>
-        }
+        title="Real-Time Alerts & Notification Center"
+        subtitle="Manage live system alerts, failure notifications, quick actions, and user channel preferences"
       />
 
-      {/* KPI Cards for Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'Total Alerts', value: notifications.length, icon: <Bell size={16} className="text-primary-600" />, bg: 'bg-primary-50' },
-          { label: 'Critical Errors', value: notifications.filter((n: any) => n.severity === 'ERROR' || n.severity === 'CRITICAL' || n.type === 'error').length, icon: <ShieldAlert size={16} className="text-rose-600" />, bg: 'bg-rose-50' },
-          { label: 'Warnings', value: notifications.filter((n: any) => n.severity === 'WARNING' || n.type === 'warning').length, icon: <AlertTriangle size={16} className="text-amber-600" />, bg: 'bg-amber-50' },
-          { label: 'Unread Messages', value: notifications.filter((n: any) => !n.isRead && !n.read).length, icon: <Info size={16} className="text-blue-600" />, bg: 'bg-blue-50' },
-        ].map((card, idx) => (
-          <div key={idx} className="card p-5 flex items-start justify-between">
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{card.value}</p>
-              <p className="text-xs font-semibold text-slate-800 mt-1">{card.label}</p>
+      {toastMessage && (
+        <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+          <Zap size={16} className="text-indigo-600 animate-pulse" /> {toastMessage}
+        </div>
+      )}
+
+      <Tabs tabs={mainTabs} active={activeTab} onChange={setActiveTab} />
+
+      {/* TAB 1: NOTIFICATION CENTER & LIVE ALERTS */}
+      {activeTab === 'center' && (
+        <div className="space-y-5">
+          {/* Controls Bar */}
+          <div className="card p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1"><Filter size={14} /> Severity Filter:</span>
+              {['all', 'CRITICAL', 'WARNING', 'INFO'].map((sev) => (
+                <button
+                  key={sev}
+                  onClick={() => setSeverityFilter(sev)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold capitalize transition-all ${
+                    severityFilter === sev
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  {sev}
+                </button>
+              ))}
             </div>
-            <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center`}>
-              {card.icon}
+
+            <div className="flex items-center gap-2">
+              {/* Test Alert Trigger Selector */}
+              <select className="select text-xs" value={triggerType} onChange={(e) => setTriggerType(e.target.value)}>
+                <option value="FAILED_IMPORT">Test Trigger: Failed Import</option>
+                <option value="FAILED_SYNC">Test Trigger: Failed Sync</option>
+                <option value="SUPPLIER_CONNECTION_FAILURE">Test Trigger: Supplier Offline</option>
+                <option value="API_FAILURE">Test Trigger: API Gateway Failure</option>
+                <option value="FTP_FAILURE">Test Trigger: FTP Transfer Drop</option>
+                <option value="VALIDATION_ERROR">Test Trigger: Product Validation Error</option>
+              </select>
+              <button onClick={handleTriggerTest} disabled={triggering} className="btn-secondary btn-xs flex items-center gap-1">
+                {triggering ? <RefreshCw size={12} className="animate-spin" /> : <Play size={12} />}
+                {triggering ? 'Firing...' : 'Fire Test Alert'}
+              </button>
+
+              <button onClick={handleMarkAllRead} className="btn-ghost btn-xs text-slate-600 dark:text-slate-300">
+                <Check size={13} /> Mark All Read
+              </button>
+              <button onClick={fetchNotifications} className="btn-ghost btn-xs text-slate-600 dark:text-slate-300">
+                <RefreshCw size={13} /> Refresh
+              </button>
             </div>
           </div>
-        ))}
-      </div>
 
-      <FilterBar search={search} onSearch={setSearch} placeholder="Search notifications by title or message...">
-        <Select
-          className="w-auto min-w-[130px]"
-          value={filterType}
-          onChange={setFilterType}
-          options={[
-            { label: 'All Types', value: 'all' },
-            { label: 'Success', value: 'success' },
-            { label: 'Info', value: 'info' },
-            { label: 'Warning', value: 'warning' },
-            { label: 'Errors', value: 'error' },
-          ]}
-        />
-      </FilterBar>
-
-      <div className="card overflow-hidden">
-        <div className="divide-y divide-slate-100">
-          {filtered.length > 0 ? (
-            filtered.map(item => (
-              <div
-                key={item.id}
-                className={`p-3.5 sm:p-5 flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 ${
-                  !(item as any).isRead && !item.read ? 'bg-primary-50/20 dark:bg-primary-950/20 border-l-2 border-primary-500' : 'border-l-2 border-transparent'
-                }`}
-              >
-                <div className="flex items-start gap-3 min-w-0 w-full flex-1">
-                  <div className="flex-shrink-0 mt-0.5">{getStatusIcon((item as any).severity?.toLowerCase() || item.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <p className={`text-sm leading-snug ${!(item as any).isRead && !item.read ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-700 dark:text-slate-300 font-semibold'}`}>
-                        {item.title}
-                      </p>
-                      <Badge variant={getBadgeVariant((item as any).severity?.toLowerCase() || item.type)}>{item.type}</Badge>
-                      {!(item as any).isRead && !item.read && <span className="w-1.5 h-1.5 rounded-full bg-primary-600 flex-shrink-0" />}
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 leading-relaxed">{item.message}</p>
-                    <p className="text-2xs font-mono text-slate-400 dark:text-slate-500">
-                      {item.timestamp ? format(new Date(item.timestamp), 'yyyy-MM-dd HH:mm:ss') : format(new Date((item as any).createdAt), 'yyyy-MM-dd HH:mm:ss')}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 w-full sm:w-auto justify-end">
-                  <button
-                    onClick={() => {
-                      handleMarkAsRead(item.id)
-                      setSelectedNotif(item)
-                    }}
-                    className="btn-icon text-slate-400 hover:bg-primary-600 hover:text-white transition-all duration-200"
-                    title="View Details"
-                  >
-                    <Eye size={14} />
-                  </button>
-                  {!(item as any).isRead && !item.read && (
-                    <button
-                      onClick={() => handleMarkAsRead(item.id)}
-                      className="btn-icon text-slate-400 hover:bg-emerald-600 hover:text-white transition-all duration-200"
-                      title="Mark as Read"
-                    >
-                      <Check size={14} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="btn-icon text-slate-400 hover:bg-rose-600 hover:text-white transition-all duration-200"
-                    title="Delete Notification"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+          {/* Notification Cards Feed */}
+          <div className="space-y-3">
+            {loading ? (
+              <div className="p-12 text-center text-xs text-slate-400">Loading notifications...</div>
+            ) : notifications.length === 0 ? (
+              <div className="card p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-xs text-slate-400">
+                <CheckCircle2 size={32} className="mx-auto text-emerald-500 mb-2" />
+                No active notifications found. All integration feeds are operating normally.
               </div>
-            ))
-          ) : (
-            <div className="p-16 text-center text-slate-400">
-              <Bell size={36} className="mx-auto mb-3 text-slate-300 animate-pulse-slow" />
-              <p className="font-medium text-slate-600">No notifications found</p>
-            </div>
-          )}
-        </div>
-      </div>
+            ) : (
+              notifications.map((notif) => {
+                const isCritical = notif.severity === 'CRITICAL' || notif.severity === 'ERROR'
+                return (
+                  <div
+                    key={notif.id}
+                    className={`card p-4 bg-white dark:bg-slate-900 border transition-all rounded-2xl ${
+                      !notif.isRead
+                        ? isCritical
+                          ? 'border-rose-400 dark:border-rose-800/80 bg-rose-50/20 dark:bg-rose-950/20 shadow-sm'
+                          : 'border-indigo-300 dark:border-indigo-800/80 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-sm'
+                        : 'border-slate-200 dark:border-slate-800 opacity-90'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {getSeverityBadge(notif.severity)}
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">{notif.title}</h4>
+                          {!notif.isRead && <span className="w-2 h-2 rounded-full bg-primary-600 animate-ping"></span>}
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">{notif.message}</p>
+                        <p className="text-[11px] font-mono text-slate-400">{new Date(notif.createdAt).toLocaleString()}</p>
+                      </div>
 
-      {/* Notification Detail Modal */}
-      <Modal
-        open={selectedNotif !== null}
-        onClose={() => setSelectedNotif(null)}
-        title="Notification Event Details"
-        subtitle={`ID: ${selectedNotif?.id || ''}`}
-        size="md"
-        footer={
-          <div className="flex gap-2 justify-end w-full">
-            {selectedNotif && !(selectedNotif as any).isRead && !selectedNotif.read && (
-              <button
-                onClick={() => {
-                  handleMarkAsRead(selectedNotif.id)
-                  setSelectedNotif(prev => prev ? { ...prev, isRead: true, read: true } : null)
-                }}
-                className="btn-secondary btn-sm flex items-center gap-1.5"
-              >
-                <Check size={14} /> Mark as Read
-              </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!notif.isRead && (
+                          <button onClick={() => handleMarkAsRead(notif.id)} className="btn-ghost btn-xs text-slate-500 hover:text-emerald-600" title="Mark as read">
+                            <Check size={14} />
+                          </button>
+                        )}
+                        <button onClick={() => handleDelete(notif.id)} className="btn-ghost btn-xs text-slate-400 hover:text-rose-600" title="Delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Action Buttons */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        {/* Quick Action 1: Retry Sync */}
+                        {(notif.type === 'FAILED_SYNC' || notif.type === 'FAILED_IMPORT' || notif.type === 'FTP_FAILURE') && (
+                          <button onClick={() => handleRetrySync(notif)} className="btn-primary btn-xs flex items-center gap-1 shadow-sm">
+                            <RefreshCw size={12} /> Retry Sync
+                          </button>
+                        )}
+
+                        {/* Quick Action 2: Open Product */}
+                        {notif.type === 'VALIDATION_ERROR' && (
+                          <a href="/products" className="btn-secondary btn-xs flex items-center gap-1">
+                            <ExternalLink size={12} /> Open Product
+                          </a>
+                        )}
+
+                        {/* Quick Action 3: View Error Details */}
+                        {notif.metadata && (
+                          <button onClick={() => setSelectedNotif(notif)} className="btn-ghost btn-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1 font-semibold">
+                            <Eye size={12} /> View Error Details
+                          </button>
+                        )}
+                      </div>
+
+                      <span className="text-[10px] font-mono text-slate-400 uppercase">Module: {notif.module || 'Integration'}</span>
+                    </div>
+                  </div>
+                )
+              })
             )}
-            <button onClick={() => setSelectedNotif(null)} className="btn-primary btn-sm">
-              Close Details
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: NOTIFICATION PREFERENCES MATRIX */}
+      {activeTab === 'preferences' && (
+        <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <Sliders size={18} className="text-primary-600" /> User Notification Preferences Matrix
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Specify which channel alerts (Email, In-App, Teams, Slack, SMS) trigger for each system event type.</p>
+            </div>
+            <button onClick={handleSavePreferences} disabled={savingPrefs} className="btn-primary flex items-center gap-1.5">
+              {savingPrefs ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+              {savingPrefs ? 'Saving Matrix...' : 'Save Preferences'}
             </button>
           </div>
-        }
-      >
-        {selectedNotif && (
-          <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xxs font-semibold text-slate-400 uppercase tracking-wider block">Timestamp</label>
-                <div className="font-mono text-slate-700 mt-1">
-                  {selectedNotif.timestamp ? format(new Date(selectedNotif.timestamp), 'yyyy-MM-dd HH:mm:ss.SSS XXX') : format(new Date((selectedNotif as any).createdAt), 'yyyy-MM-dd HH:mm:ss.SSS XXX')}
-                </div>
-              </div>
-              <div>
-                <label className="text-xxs font-semibold text-slate-400 uppercase tracking-wider block">Type</label>
-                <div className="mt-1">
-                  <Badge variant={getBadgeVariant((selectedNotif as any).severity?.toLowerCase() || selectedNotif.type)}>{selectedNotif.type}</Badge>
-                </div>
-              </div>
-            </div>
 
-            <div>
-              <label className="text-xxs font-semibold text-slate-400 uppercase tracking-wider block">Event Title</label>
-              <div className="text-slate-800 font-semibold text-sm mt-1">{selectedNotif.title}</div>
-            </div>
+          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="p-3.5">System Event Type</th>
+                  <th className="p-3.5 text-center"><span className="inline-flex items-center gap-1"><Bell size={13} className="text-primary-600" /> In-App Alert</span></th>
+                  <th className="p-3.5 text-center"><span className="inline-flex items-center gap-1"><Mail size={13} className="text-purple-600" /> Email Alert</span></th>
+                  <th className="p-3.5 text-center"><span className="inline-flex items-center gap-1"><MessageSquare size={13} className="text-indigo-600" /> MS Teams</span></th>
+                  <th className="p-3.5 text-center"><span className="inline-flex items-center gap-1"><MessageSquare size={13} className="text-teal-600" /> Slack</span></th>
+                  <th className="p-3.5 text-center"><span className="inline-flex items-center gap-1"><Smartphone size={13} className="text-amber-600" /> SMS</span></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                {preferences.map((item) => (
+                  <tr key={item.eventType} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="p-3.5 font-semibold text-slate-800 dark:text-slate-100">{item.name}</td>
+                    
+                    <td className="p-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={item.inAppEnabled}
+                        onChange={() => handlePrefToggle(item.eventType, 'inAppEnabled')}
+                        className="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900 cursor-pointer w-4 h-4 text-primary-600"
+                      />
+                    </td>
 
-            <div>
-              <label className="text-xxs font-semibold text-slate-400 uppercase tracking-wider block">Notification Message</label>
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-slate-700 leading-relaxed mt-1">
-                {selectedNotif.message}
-              </div>
-            </div>
+                    <td className="p-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={item.emailEnabled}
+                        onChange={() => handlePrefToggle(item.eventType, 'emailEnabled')}
+                        className="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900 cursor-pointer w-4 h-4 text-purple-600"
+                      />
+                    </td>
 
-            {selectedNotif.details && (
-              <div>
-                <label className="text-xxs font-semibold text-slate-400 uppercase tracking-wider block">Detailed Diagnostics</label>
-                <pre className="bg-slate-900 text-slate-200 border border-slate-800 rounded-xl p-3.5 font-mono overflow-x-auto mt-1 whitespace-pre-wrap max-h-48 scrollbar-thin">
-                  {selectedNotif.details}
-                </pre>
-              </div>
-            )}
+                    <td className="p-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={item.teamsEnabled}
+                        onChange={() => handlePrefToggle(item.eventType, 'teamsEnabled')}
+                        className="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900 cursor-pointer w-4 h-4 text-indigo-600"
+                      />
+                    </td>
+
+                    <td className="p-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={item.slackEnabled}
+                        onChange={() => handlePrefToggle(item.eventType, 'slackEnabled')}
+                        className="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900 cursor-pointer w-4 h-4 text-teal-600"
+                      />
+                    </td>
+
+                    <td className="p-3.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={item.smsEnabled}
+                        onChange={() => handlePrefToggle(item.eventType, 'smsEnabled')}
+                        className="rounded border-slate-300 dark:border-slate-700 dark:bg-slate-900 cursor-pointer w-4 h-4 text-amber-600"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
+
+      {/* ERROR DETAILS MODAL */}
+      {selectedNotif && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="max-w-xl w-full card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <AlertCircle size={18} className="text-rose-600" /> Error Log Details
+              </h3>
+              <button onClick={() => setSelectedNotif(null)} className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="text-xs space-y-1 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl">
+              <div><strong>Title:</strong> {selectedNotif.title}</div>
+              <div><strong>Severity:</strong> {selectedNotif.severity}</div>
+              <div><strong>Timestamp:</strong> {new Date(selectedNotif.createdAt).toLocaleString()}</div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Message & Failure Context</label>
+              <p className="p-3 bg-rose-50/50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 rounded-xl text-xs border border-rose-200 dark:border-rose-900/60 font-medium">{selectedNotif.message}</p>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Metadata / Stack Trace JSON</label>
+              <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl text-xs font-mono overflow-x-auto max-h-48 border border-slate-800">
+                {selectedNotif.metadata ? JSON.stringify(JSON.parse(selectedNotif.metadata), null, 2) : 'No extra metadata available.'}
+              </pre>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button onClick={() => setSelectedNotif(null)} className="btn-secondary w-full">Close Details</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

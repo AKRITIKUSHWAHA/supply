@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { EmailService } from '../services/email.service';
 
 const prisma = new PrismaClient();
 
@@ -7,7 +8,7 @@ export const getSettings = async (req: Request, res: Response) => {
   try {
     const settingsList = await prisma.systemSetting.findMany();
     const settingsMap: Record<string, string> = {};
-    settingsList.forEach(s => {
+    settingsList.forEach((s) => {
       settingsMap[s.key] = s.value;
     });
 
@@ -22,6 +23,13 @@ export const getSettings = async (req: Request, res: Response) => {
       cronSchedule: settingsMap['cronSchedule'] || '0 * * * *',
       smtpEmail: settingsMap['smtpEmail'] || 'notifications@supplybridge.io',
       securityMfa: settingsMap['securityMfa'] !== 'false',
+      emailProvider: settingsMap['emailProvider'] || 'SMTP',
+      smtpHost: settingsMap['smtpHost'] || 'smtp.sendgrid.net',
+      smtpPort: settingsMap['smtpPort'] || '587',
+      smtpUsername: settingsMap['smtpUsername'] || 'apikey',
+      sessionTimeoutMinutes: settingsMap['sessionTimeoutMinutes'] || '30',
+      passwordExpiryDays: settingsMap['passwordExpiryDays'] || '90',
+      ipWhitelistingEnabled: settingsMap['ipWhitelistingEnabled'] === 'true',
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to fetch system settings' });
@@ -43,5 +51,21 @@ export const updateSettings = async (req: Request, res: Response) => {
     res.json({ message: 'Settings saved successfully', settings: settingsData });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to update system settings' });
+  }
+};
+
+export const sendTestEmailController = async (req: Request, res: Response) => {
+  try {
+    const { targetEmail } = req.body;
+    const email = targetEmail || req.user?.email || 'admin@supplybridge.io';
+
+    const result = await EmailService.sendTestEmail(email);
+    if (result.success) {
+      res.json({ message: `Test email sent successfully to ${email}`, result });
+    } else {
+      res.status(500).json({ error: result.error || 'Failed to send test email' });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to send test email' });
   }
 };

@@ -1,36 +1,58 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Globe, RefreshCw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, Plus, Edit2, Trash2 } from 'lucide-react'
-import { SectionHeader, HealthIndicator, ProgressBar, ConfirmDialog } from '../../components/ui'
+import { Globe, RefreshCw, ExternalLink, CheckCircle2, Plus, Edit2, Trash2, Key, Sliders, ShieldCheck, DollarSign, Package } from 'lucide-react'
+import { SectionHeader } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
-import { mockStores } from '../../data/mockData'
 import { statusToVariant, timeAgo } from '../../utils'
-import type { Store } from '../../types'
+
+export interface StorefrontItem {
+  id: string
+  name: string
+  type: string
+  storeKey: string
+  autoRoutingRule: string
+  url: string
+  region: string
+  status: string
+  syncStatus: string
+  productCount: number
+  inventoryCron: string
+  pricingCron: string
+  catalogCron: string
+  lastSync: string | null
+  createdAt: string
+}
 
 export const StoreManagement: React.FC = () => {
   const navigate = useNavigate()
 
-  const [storesList, setStoresList] = useState<Store[]>([])
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null)
+  const [storesList, setStoresList] = useState<StorefrontItem[]>([])
+  const [selectedStore, setSelectedStore] = useState<StorefrontItem | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const [editingStore, setEditingStore] = useState<Store | null>(null)
-  const [deletingStore, setDeletingStore] = useState<Store | null>(null)
+  const [editingStore, setEditingStore] = useState<StorefrontItem | null>(null)
+  const [deletingStore, setDeletingStore] = useState<StorefrontItem | null>(null)
 
   const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null)
+  const [testingStoreId, setTestingStoreId] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
-  // Form State
+  // Zero-Code Onboarding Form State
   const [formData, setFormData] = useState({
     name: '',
     url: '',
-    platform: 'Shift4Shop',
+    platform: 'Shopify',
+    storeKey: '',
+    autoRoutingRule: 'ALL',
     region: 'North America',
     apiKey: '',
+    apiSecret: '',
+    inventoryCron: '*/15 * * * *',
+    pricingCron: '0 * * * *',
   })
 
   const fetchStores = async () => {
@@ -41,53 +63,104 @@ export const StoreManagement: React.FC = () => {
         setStoresList(data)
       }
     } catch (err) {
-      console.error('Failed to fetch stores:', err)
+      console.error('Failed to fetch storefronts:', err)
     }
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchStores()
   }, [])
 
   const showNotification = (msg: string) => {
     setToastMessage(msg)
-    setTimeout(() => setToastMessage(null), 3000)
+    setTimeout(() => setToastMessage(null), 3500)
   }
 
   // --- Handlers ---
-  const handleSyncStore = async (id: string, name: string) => {
+  const handlePushSyncStore = async (id: string, name: string) => {
     setSyncingStoreId(id)
     try {
-      const res = await fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
-      const updated = await res.json()
-      setStoresList(prev => prev.map(s => (s.id === id ? updated : s)))
-      showNotification(`Store "${name}" catalog synchronized successfully!`)
+      const res = await fetch(`http://localhost:5000/api/stores/${id}/push-sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ syncType: 'FULL' }),
+      })
+      const result = await res.json()
+      showNotification(`Direct Push Sync completed: ${result.pushedProductsCount || 50} products updated on ${name}!`)
+      fetchStores()
     } catch (err) {
-      console.error(err)
+      console.error('Push sync failed:', err)
     } finally {
       setSyncingStoreId(null)
     }
   }
 
-  // Route to Website Sync status page inside app cleanly without broken external DNS error
-  const handleOpenStoreWebsite = (store: Store, e: React.MouseEvent) => {
+  const handlePushInventory = async (id: string, name: string) => {
+    setSyncingStoreId(id)
+    try {
+      await fetch(`http://localhost:5000/api/stores/${id}/push-inventory`, { method: 'POST' })
+      showNotification(`Inventory stock pushed successfully to ${name}!`)
+      fetchStores()
+    } catch (err) {
+      console.error('Push inventory failed:', err)
+    } finally {
+      setSyncingStoreId(null)
+    }
+  }
+
+  const handlePushPricing = async (id: string, name: string) => {
+    setSyncingStoreId(id)
+    try {
+      await fetch(`http://localhost:5000/api/stores/${id}/push-pricing`, { method: 'POST' })
+      showNotification(`Price updates pushed successfully to ${name}!`)
+      fetchStores()
+    } catch (err) {
+      console.error('Push pricing failed:', err)
+    } finally {
+      setSyncingStoreId(null)
+    }
+  }
+
+  const handleTestConnection = async (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate('/sync/website')
-    showNotification(`Navigated to Store Synchronization for ${store.name}`)
+    setTestingStoreId(id)
+    try {
+      const res = await fetch(`http://localhost:5000/api/stores/${id}/test-connection`, { method: 'POST' })
+      const result = await res.json()
+      showNotification(`Connection Verified: ${result.message}`)
+      fetchStores()
+    } catch (err) {
+      console.error('Connection test failed:', err)
+    } finally {
+      setTestingStoreId(null)
+    }
   }
 
   const handleOpenAdd = () => {
-    setFormData({ name: '', url: '', platform: 'Shift4Shop', region: 'North America', apiKey: '' })
+    setFormData({
+      name: '',
+      url: '',
+      platform: 'Shopify',
+      storeKey: '',
+      autoRoutingRule: 'ALL',
+      region: 'North America',
+      apiKey: '',
+      apiSecret: '',
+      inventoryCron: '*/15 * * * *',
+      pricingCron: '0 * * * *',
+    })
     setAddOpen(true)
   }
 
-  const handleCreateStore = async () => {
+  const handleCreateStore = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!formData.name.trim() || !formData.url.trim()) {
-      alert('Please enter Store Name and URL.')
+      alert('Please enter Storefront Name and URL.')
       return
     }
 
     try {
+      const key = formData.storeKey.trim() || formData.name.toLowerCase().replace(/[^a-z0-9]/g, '_')
       const res = await fetch('http://localhost:5000/api/stores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,39 +168,44 @@ export const StoreManagement: React.FC = () => {
           name: formData.name,
           url: formData.url.startsWith('http') ? formData.url : `https://${formData.url}`,
           platform: formData.platform,
+          storeKey: key,
+          autoRoutingRule: formData.autoRoutingRule,
           region: formData.region,
           apiKey: formData.apiKey,
-        })
+          apiSecret: formData.apiSecret,
+          inventoryCron: formData.inventoryCron,
+          pricingCron: formData.pricingCron,
+        }),
       })
       const created = await res.json()
-      setStoresList(prev => [created, ...prev])
+      setStoresList((prev) => [created, ...prev])
       setAddOpen(false)
-      showNotification(`Store "${created.name}" connected!`)
+      showNotification(`Zero-Code Storefront "${created.name}" (Key: ${created.storeKey}) connected!`)
     } catch (err) {
       console.error('Failed to create store:', err)
     }
   }
 
-  const handleOpenEdit = (store: Store, e: React.MouseEvent) => {
+  const handleOpenEdit = (store: StorefrontItem, e: React.MouseEvent) => {
     e.stopPropagation()
     setEditingStore(store)
     setFormData({
       name: store.name,
       url: store.url,
-      platform: store.platform,
+      platform: store.type,
+      storeKey: store.storeKey,
+      autoRoutingRule: store.autoRoutingRule || 'ALL',
       region: store.region || 'North America',
       apiKey: '••••••••••••••••',
+      apiSecret: '••••••••••••••••',
+      inventoryCron: store.inventoryCron || '*/15 * * * *',
+      pricingCron: store.pricingCron || '0 * * * *',
     })
     setEditOpen(true)
   }
 
-  const handleOpenDelete = (store: Store, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setDeletingStore(store)
-    setDeleteOpen(true)
-  }
-
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!editingStore || !formData.name.trim() || !formData.url.trim()) return
 
     try {
@@ -138,14 +216,17 @@ export const StoreManagement: React.FC = () => {
           name: formData.name,
           url: formData.url.startsWith('http') ? formData.url : `https://${formData.url}`,
           platform: formData.platform,
-          region: formData.region,
-        })
+          storeKey: formData.storeKey,
+          autoRoutingRule: formData.autoRoutingRule,
+          inventoryCron: formData.inventoryCron,
+          pricingCron: formData.pricingCron,
+        }),
       })
       const updated = await res.json()
-      setStoresList(prev => prev.map(s => (s.id === editingStore.id ? updated : s)))
+      setStoresList((prev) => prev.map((s) => (s.id === editingStore.id ? updated : s)))
       setEditOpen(false)
       setEditingStore(null)
-      showNotification(`Store "${formData.name}" details updated!`)
+      showNotification(`Storefront "${formData.name}" configuration updated!`)
     } catch (err) {
       console.error('Failed to update store:', err)
     }
@@ -156,8 +237,8 @@ export const StoreManagement: React.FC = () => {
 
     try {
       await fetch(`http://localhost:5000/api/stores/${deletingStore.id}`, { method: 'DELETE' })
-      setStoresList(prev => prev.filter(s => s.id !== deletingStore.id))
-      showNotification(`Store "${deletingStore.name}" connection removed.`)
+      setStoresList((prev) => prev.filter((s) => s.id !== deletingStore.id))
+      showNotification(`Storefront "${deletingStore.name}" connection removed.`)
     } catch (err) {
       console.error('Failed to delete store:', err)
     } finally {
@@ -175,7 +256,7 @@ export const StoreManagement: React.FC = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-semibold"
+            className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-semibold border border-slate-700"
           >
             <CheckCircle2 size={16} className="text-emerald-400" />
             {toastMessage}
@@ -184,19 +265,22 @@ export const StoreManagement: React.FC = () => {
       </AnimatePresence>
 
       <SectionHeader
-        title="Store Management"
-        subtitle="Manage connected multi-channel ecommerce storefronts and store catalog synchronization status"
+        title="Storefront Synchronization Engine (Middleware Core)"
+        subtitle="Manage connected ecommerce storefronts, store keys, auto-routing rules, and direct API push sync"
         actions={
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/sync/website')}
               className="btn-secondary btn-sm flex items-center gap-1.5 cursor-pointer font-bold text-xs"
-              title="Go to Store Synchronization Page"
             >
-              <Globe size={14} className="text-primary-600 dark:text-primary-400" /> Store Synchronization
+              <Globe size={14} className="text-primary-600 dark:text-primary-400" /> Website Sync Monitor
             </button>
-            <button onClick={handleOpenAdd} className="btn-primary btn-sm flex items-center gap-1.5 cursor-pointer text-xs">
-              <Plus size={14} /> Add Store Connection
+            <button
+              onClick={handleOpenAdd}
+              type="button"
+              className="btn-primary btn-sm flex items-center gap-1.5 cursor-pointer text-xs shadow-md font-bold"
+            >
+              <Plus size={14} /> Zero-Code Store Onboarding
             </button>
           </div>
         }
@@ -205,22 +289,23 @@ export const StoreManagement: React.FC = () => {
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Stores', value: storesList.length, color: 'text-slate-800' },
-          { label: 'Active Stores', value: storesList.filter(s => s.status === 'active').length, color: 'text-emerald-600' },
-          { label: 'Synced Stores', value: storesList.filter(s => s.syncStatus === 'synced').length, color: 'text-primary-600' },
-          { label: 'Sync Issues', value: storesList.filter(s => s.status === 'error' || s.syncStatus === 'failed').length, color: 'text-rose-600' },
-        ].map(s => (
-          <div key={s.label} className="card px-4 py-3.5 text-center">
+          { label: 'Connected Storefronts', value: storesList.length, color: 'text-slate-800 dark:text-slate-100' },
+          { label: 'Active Direct Push APIs', value: storesList.filter((s) => s.status === 'active').length, color: 'text-emerald-600 dark:text-emerald-400' },
+          { label: 'Fully Synced Stores', value: storesList.filter((s) => s.syncStatus === 'synced').length, color: 'text-primary-600 dark:text-primary-400' },
+          { label: 'Sync Errors', value: storesList.filter((s) => s.status === 'error' || s.syncStatus === 'failed').length, color: 'text-rose-600 dark:text-rose-400' },
+        ].map((s) => (
+          <div key={s.label} className="card px-4 py-3.5 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
             <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
             <p className="text-xs text-slate-400 font-semibold mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Store Cards */}
+      {/* Storefront Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-        {storesList.map(store => {
+        {storesList.map((store) => {
           const isSyncingThis = syncingStoreId === store.id || store.syncStatus === 'syncing'
+          const isTestingThis = testingStoreId === store.id
 
           return (
             <div
@@ -228,51 +313,36 @@ export const StoreManagement: React.FC = () => {
               className="card p-5 hover:shadow-card-md transition-all flex flex-col justify-between border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
             >
               <div>
-                <div className="flex items-start justify-between gap-2 mb-4">
-                  <div
-                    className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
-                    onClick={() => setSelectedStore(store)}
-                  >
-                    <div
-                      className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border ${
-                        store.status === 'active'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900/60'
-                          : store.status === 'error'
-                          ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-900/60'
-                          : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                      }`}
-                    >
-                      <Globe
-                        size={18}
-                        className={
-                          store.status === 'active'
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : store.status === 'error'
-                            ? 'text-rose-600 dark:text-rose-400'
-                            : 'text-slate-400 dark:text-slate-500'
-                        }
-                      />
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1" onClick={() => setSelectedStore(store)}>
+                    <div className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900/60">
+                      <Globe size={18} className="text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-slate-900 dark:text-slate-100 text-sm hover:text-primary-600 transition-colors truncate" title={store.name}>
                         {store.name}
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-400 font-medium">{store.platform}</p>
+                      <p className="text-xs text-slate-400 font-medium">{store.type} Direct API</p>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-1 shrink-0 self-start">
                     <Badge variant={statusToVariant(store.syncStatus)} dot>
                       {store.syncStatus}
                     </Badge>
                     <button
-                      onClick={e => handleOpenEdit(store, e)}
-                      className="btn-icon p-1.5 rounded-lg text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={(e) => handleOpenEdit(store, e)}
+                      className="btn-icon p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                       title="Edit Store Settings"
                     >
                       <Edit2 size={14} />
                     </button>
                     <button
-                      onClick={e => handleOpenDelete(store, e)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeletingStore(store)
+                        setDeleteOpen(true)
+                      }}
                       className="btn-icon p-1.5 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                       title="Remove Store Connection"
                     >
@@ -281,232 +351,224 @@ export const StoreManagement: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Store Keys & Routing Badges */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  <span className="text-[10px] font-mono font-bold bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-2.5 py-0.5 rounded-md flex items-center gap-1 border border-purple-200 dark:border-purple-800">
+                    <Key size={10} /> KEY: {store.storeKey || 'anchorage_med'}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 rounded-md flex items-center gap-1 border border-blue-200 dark:border-blue-800">
+                    <Sliders size={10} /> RULE: {store.autoRoutingRule || 'ALL'}
+                  </span>
+                </div>
+
                 <div
                   className="space-y-2 text-sm bg-slate-50/80 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-700/60 cursor-pointer"
                   onClick={() => setSelectedStore(store)}
                 >
                   <div className="flex justify-between text-slate-600 dark:text-slate-300 text-xs">
                     <span>Assigned Products</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">
-                      {store.productCount.toLocaleString()} SKUs
-                    </span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{store.productCount.toLocaleString()} SKUs</span>
                   </div>
                   <div className="flex justify-between text-slate-600 dark:text-slate-300 text-xs">
-                    <span>Store Region</span>
-                    <span className="text-slate-700 dark:text-slate-200 font-semibold">{store.region || '—'}</span>
+                    <span>Inventory Schedule</span>
+                    <span className="font-mono text-slate-500 dark:text-slate-400">{store.inventoryCron || '*/15 * * * *'}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 dark:text-slate-300 text-xs">
                     <span>Last Sync Date</span>
-                    <span className="text-slate-500 dark:text-slate-400 font-mono">
-                      {store.lastSync ? timeAgo(store.lastSync) : 'Never'}
-                    </span>
+                    <span className="text-slate-500 dark:text-slate-400 font-mono">{store.lastSync ? timeAgo(store.lastSync) : 'Never'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  disabled={isSyncingThis}
-                  className="btn-primary btn-sm flex-1 flex items-center justify-center gap-1.5 cursor-pointer font-bold"
-                  onClick={e => {
-                    e.stopPropagation()
-                    handleSyncStore(store.id, store.name)
-                  }}
-                >
-                  <RefreshCw size={12} className={isSyncingThis ? 'animate-spin' : ''} />
-                  {isSyncingThis ? 'Syncing...' : 'Sync Catalog'}
-                </button>
-                <button
-                  onClick={e => handleOpenStoreWebsite(store, e)}
-                  className="btn-secondary btn-sm flex items-center justify-center cursor-pointer"
-                  title="View Website Sync Status"
-                >
-                  <ExternalLink size={14} />
-                </button>
+              <div className="space-y-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex gap-2">
+                  <button
+                    disabled={isSyncingThis}
+                    className="btn-primary btn-sm flex-1 flex items-center justify-center gap-1.5 font-bold"
+                    onClick={() => handlePushSyncStore(store.id, store.name)}
+                  >
+                    <RefreshCw size={12} className={isSyncingThis ? 'animate-spin' : ''} />
+                    {isSyncingThis ? 'Pushing Sync...' : 'Push Full Catalog'}
+                  </button>
+                  <button
+                    onClick={(e) => handleTestConnection(store.id, store.name, e)}
+                    disabled={isTestingThis}
+                    className="btn-secondary btn-sm flex items-center justify-center gap-1 font-semibold text-xs"
+                    title="Test API Connectivity"
+                  >
+                    {isTestingThis ? <RefreshCw size={12} className="animate-spin" /> : <ShieldCheck size={14} className="text-emerald-500" />}
+                    {isTestingThis ? 'Testing...' : 'Test API'}
+                  </button>
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => handlePushInventory(store.id, store.name)} className="btn-ghost btn-xs text-xs text-slate-600 dark:text-slate-300 flex-1 flex items-center justify-center gap-1">
+                    <Package size={12} /> Sync Inventory
+                  </button>
+                  <button onClick={() => handlePushPricing(store.id, store.name)} className="btn-ghost btn-xs text-xs text-slate-600 dark:text-slate-300 flex-1 flex items-center justify-center gap-1">
+                    <DollarSign size={12} /> Sync Pricing
+                  </button>
+                </div>
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Store Detail Modal */}
-      {selectedStore && (
-        <Modal
-          open
-          onClose={() => setSelectedStore(null)}
-          title={selectedStore.name}
-          subtitle={selectedStore.url}
-          size="lg"
-          footer={
-            <>
-              <button onClick={() => setSelectedStore(null)} className="btn-secondary">Close</button>
-              <button
-                onClick={() => handleSyncStore(selectedStore.id, selectedStore.name)}
-                className="btn-primary flex items-center gap-1.5 cursor-pointer"
-              >
-                <RefreshCw size={14} /> Sync Catalog Now
-              </button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'Platform', value: selectedStore.platform },
-                { label: 'Status', value: <Badge variant={statusToVariant(selectedStore.status)}>{selectedStore.status}</Badge> },
-                { label: 'Sync Status', value: <Badge variant={statusToVariant(selectedStore.syncStatus)}>{selectedStore.syncStatus}</Badge> },
-                { label: 'Assigned Products', value: `${selectedStore.productCount.toLocaleString()} SKUs` },
-                { label: 'Region', value: selectedStore.region || '—' },
-                { label: 'Last Sync', value: selectedStore.lastSync ? timeAgo(selectedStore.lastSync) : 'Never' },
-              ].map(item => (
-                <div key={item.label} className="bg-slate-50 rounded-xl p-3">
-                  <p className="text-xs text-slate-400 mb-1 font-semibold">{item.label}</p>
-                  <div className="text-sm font-bold text-slate-800">{item.value}</div>
-                </div>
-              ))}
-            </div>
-
-            <div>
-              <p className="text-xs font-bold text-slate-700 mb-2">Store Endpoint URL</p>
-              <div className="flex items-center gap-2 p-3 bg-slate-100 rounded-xl font-mono text-xs">
-                <code className="text-slate-700 flex-1">{selectedStore.url}</code>
-                <button
-                  onClick={e => handleOpenStoreWebsite(selectedStore, e)}
-                  className="btn-icon"
-                  title="View Sync Status"
-                >
-                  <ExternalLink size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Add Store Modal */}
+      {/* ZERO-CODE STOREFRONT ONBOARDING MODAL */}
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        title="Add New Store Connection"
-        subtitle="Connect a Shift4Shop storefront to SupplyBridge PIM"
-        footer={
-          <>
-            <button onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleCreateStore} className="btn-primary">Connect Store</button>
-          </>
-        }
+        title="Zero-Code Storefront Onboarding"
+        subtitle="Onboard a new storefront without code redevelopment. Configure API credentials, store routing rules, and granular schedules below:"
+        size="lg"
       >
-        <div className="space-y-4">
+        <form onSubmit={handleCreateStore} className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">Store Name *</label>
-            <input
-              className="input"
-              placeholder="e.g. SupplyBridge EU Store"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-            />
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Name *</label>
+            <input className="input" placeholder="e.g., Anchorage Medical Store" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">Store URL *</label>
-            <input
-              className="input"
-              placeholder="https://yourstore.3dcart.com"
-              value={formData.url}
-              onChange={e => setFormData({ ...formData, url: e.target.value })}
-            />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Platform Connector *</label>
+              <select className="select font-medium" value={formData.platform} onChange={(e) => setFormData({ ...formData, platform: e.target.value })}>
+                <option value="Shopify">Shopify Store API</option>
+                <option value="WooCommerce">WooCommerce REST API</option>
+                <option value="Shift4Shop">Shift4Shop (3dcart API)</option>
+                <option value="Custom REST API">Custom Store API Gateway</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Store Routing Key *</label>
+              <input className="input font-mono" placeholder="anchorage_med" value={formData.storeKey} onChange={(e) => setFormData({ ...formData, storeKey: e.target.value })} required />
+            </div>
           </div>
+
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">Platform</label>
-            <select
-              className="select font-medium"
-              value={formData.platform}
-              onChange={e => setFormData({ ...formData, platform: e.target.value })}
-            >
-              <option value="Shift4Shop">Shift4Shop (3dcart)</option>
-              <option value="Custom API">Custom Store API</option>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Endpoint URL *</label>
+            <input className="input font-mono" placeholder="https://anchorage-med.myshopify.com" value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} required />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Auto-Routing & Product Distribution Rule</label>
+            <select className="select font-medium" value={formData.autoRoutingRule} onChange={(e) => setFormData({ ...formData, autoRoutingRule: e.target.value })}>
+              <option value="ALL">Push All Master Catalog Products</option>
+              <option value="MEDICAL_ONLY">Route Medical & Healthcare Products Only</option>
+              <option value="RETAIL_ONLY">Route General Retail Products Only</option>
             </select>
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">Region</label>
-            <select
-              className="select font-medium"
-              value={formData.region}
-              onChange={e => setFormData({ ...formData, region: e.target.value })}
-            >
-              <option value="North America">North America</option>
-              <option value="Europe">Europe</option>
-              <option value="Asia Pacific">Asia Pacific</option>
-            </select>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">API Key / Token (AES Encrypted)</label>
+              <input className="input font-mono text-xs" type="password" placeholder="shpat_1234567890" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">API Secret Key (AES Encrypted)</label>
+              <input className="input font-mono text-xs" type="password" placeholder="shpss_9876543210" value={formData.apiSecret} onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })} />
+            </div>
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">REST API Key *</label>
-            <input
-              className="input font-mono text-xs"
-              type="password"
-              placeholder="Shift4Shop API key token"
-              value={formData.apiKey}
-              onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
-            />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Inventory Sync Schedule</label>
+              <select className="select font-mono text-xs" value={formData.inventoryCron} onChange={(e) => setFormData({ ...formData, inventoryCron: e.target.value })}>
+                <option value="*/15 * * * *">Every 15 Minutes</option>
+                <option value="0 * * * *">Every Hour</option>
+                <option value="0 */6 * * *">Every 6 Hours</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Pricing Sync Schedule</label>
+              <select className="select font-mono text-xs" value={formData.pricingCron} onChange={(e) => setFormData({ ...formData, pricingCron: e.target.value })}>
+                <option value="0 * * * *">Every Hour</option>
+                <option value="0 */6 * * *">Every 6 Hours</option>
+                <option value="0 0 * * *">Daily at Midnight</option>
+              </select>
+            </div>
           </div>
-        </div>
+
+          <div className="pt-3 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+            <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Onboard Storefront</button>
+          </div>
+        </form>
       </Modal>
 
-      {/* Edit Store Modal */}
+      {/* EDIT STOREFRONT MODAL */}
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title="Edit Store Settings"
-        subtitle={`Updating settings for ${editingStore?.name}`}
-        footer={
-          <>
-            <button onClick={() => setEditOpen(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleSaveEdit} className="btn-primary">Save Changes</button>
-          </>
-        }
+        title="Edit Storefront Settings"
+        subtitle={`Configure API routing and sync settings for ${editingStore?.name}`}
+        size="lg"
       >
-        <div className="space-y-4">
+        <form onSubmit={handleSaveEdit} className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">Store Name *</label>
-            <input
-              className="input"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-            />
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Name *</label>
+            <input className="input" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">Store URL *</label>
-            <input
-              className="input"
-              value={formData.url}
-              onChange={e => setFormData({ ...formData, url: e.target.value })}
-            />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Platform Connector</label>
+              <select className="select font-medium" value={formData.platform} onChange={(e) => setFormData({ ...formData, platform: e.target.value })}>
+                <option value="Shopify">Shopify Store API</option>
+                <option value="WooCommerce">WooCommerce REST API</option>
+                <option value="Shift4Shop">Shift4Shop (3dcart API)</option>
+                <option value="Custom REST API">Custom Store API Gateway</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Store Routing Key</label>
+              <input className="input font-mono" value={formData.storeKey} onChange={(e) => setFormData({ ...formData, storeKey: e.target.value })} required />
+            </div>
           </div>
+
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1.5">Region</label>
-            <select
-              className="select font-medium"
-              value={formData.region}
-              onChange={e => setFormData({ ...formData, region: e.target.value })}
-            >
-              <option value="North America">North America</option>
-              <option value="Europe">Europe</option>
-              <option value="Asia Pacific">Asia Pacific</option>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Endpoint URL</label>
+            <input className="input font-mono" value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} required />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Auto-Routing & Product Distribution Rule</label>
+            <select className="select font-medium" value={formData.autoRoutingRule} onChange={(e) => setFormData({ ...formData, autoRoutingRule: e.target.value })}>
+              <option value="ALL">Push All Master Catalog Products</option>
+              <option value="MEDICAL_ONLY">Route Medical & Healthcare Products Only</option>
+              <option value="RETAIL_ONLY">Route General Retail Products Only</option>
             </select>
           </div>
-        </div>
+
+          <div className="pt-3 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+            <button type="button" onClick={() => setEditOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Save Changes</button>
+          </div>
+        </form>
       </Modal>
 
-      {/* Confirm Delete Dialog */}
-      <ConfirmDialog
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Remove Store Connection"
-        message={`Are you sure you want to remove store connection "${deletingStore?.name}"?`}
-        confirmLabel="Yes, Remove Store"
-        danger
-      />
+      {/* CONFIRM DELETE MODAL */}
+      {deleteOpen && deletingStore && (
+        <Modal
+          open
+          onClose={() => setDeleteOpen(false)}
+          title="Remove Storefront Connection"
+          subtitle={`Are you sure you want to disconnect ${deletingStore.name}?`}
+          footer={
+            <>
+              <button onClick={() => setDeleteOpen(false)} className="btn-secondary">Cancel</button>
+              <button onClick={handleConfirmDelete} className="btn-danger">Confirm Disconnect</button>
+            </>
+          }
+        >
+          <p className="text-xs text-slate-600">This action will remove the API connection and store routing rules for {deletingStore.name}. Existing storefront products will remain intact.</p>
+        </Modal>
+      )}
     </div>
   )
 }

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { PrismaClient, NotificationType, Severity } from '@prisma/client';
 import { NotificationService } from '../services/notification.service';
+import { StorefrontConnectorService } from '../services/storefrontConnector.service';
+import { encryptSecret } from '../utils/crypto';
 
 const prisma = new PrismaClient();
 
@@ -10,12 +12,17 @@ function formatStore(s: any) {
   return {
     id: s.id,
     name: s.name,
+    type: s.type || 'Shopify',
+    storeKey: s.storeKey || `store_${s.id.substring(0, 6)}`,
+    autoRoutingRule: s.autoRoutingRule || 'ALL',
     url: urlConfig || 'https://store.myshopify.com',
-    platform: s.type || 'Shift4Shop',
     region: regionConfig,
     status: s.connectionStatus || 'active',
     syncStatus: s.syncStatus || 'synced',
-    productCount: 0,
+    productCount: s.productMappings?.length || 0,
+    inventoryCron: s.inventoryCron || '*/15 * * * *',
+    pricingCron: s.pricingCron || '0 * * * *',
+    catalogCron: s.catalogCron || '0 2 * * *',
     lastSync: s.lastSync || s.createdAt,
     createdAt: s.createdAt,
   };
@@ -24,7 +31,7 @@ function formatStore(s: any) {
 export const getStores = async (req: Request, res: Response) => {
   try {
     const rawStores = await prisma.store.findMany({
-      include: { configurations: true },
+      include: { configurations: true, credentials: true, productMappings: true },
       orderBy: { createdAt: 'desc' },
     });
     const data = rawStores.map(formatStore);
@@ -34,35 +41,62 @@ export const getStores = async (req: Request, res: Response) => {
   }
 };
 
+export const getStoreById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const store = await prisma.store.findUnique({
+      where: { id },
+      include: { configurations: true, credentials: true, productMappings: true },
+    });
+    if (!store) {
+      return res.status(404).json({ error: 'Storefront not found' });
+    }
+    res.json(formatStore(store));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch Store details' });
+  }
+};
+
 export const createStore = async (req: Request, res: Response) => {
   try {
-    const { name, url, platform, region, apiKey } = req.body;
+    const { name, url, platform, storeKey, autoRoutingRule, region, apiKey, apiSecret, inventoryCron, pricingCron } = req.body;
+
+    const key = storeKey || name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
     const newStore = await prisma.store.create({
       data: {
-        name: name || 'New Store',
-        type: platform || 'Shift4Shop',
+        name: name || 'New Storefront',
+        type: platform || 'Shopify',
+        storeKey: key,
+        autoRoutingRule: autoRoutingRule || 'ALL',
         connectionStatus: 'active',
         syncStatus: 'synced',
+        inventoryCron: inventoryCron || '*/15 * * * *',
+        pricingCron: pricingCron || '0 * * * *',
         lastSync: new Date(),
         configurations: {
           create: [
             { key: 'url', value: url || 'https://store.myshopify.com' },
             { key: 'region', value: region || 'North America' },
-          ]
+          ],
         },
-        credentials: apiKey ? {
+        credentials: {
           create: {
-            apiKey: apiKey,
-          }
-        } : undefined
+            apiKey: apiKey || 'sb_store_key_live',
+            secret: apiSecret || '',
+            encryptedApiKey: apiKey ? encryptSecret(apiKey) : undefined,
+            encryptedSecret: apiSecret ? encryptSecret(apiSecret) : undefined,
+            storeUrl: url,
+          },
+        },
       },
-      include: { configurations: true }
+      include: { configurations: true, credentials: true },
     });
 
     NotificationService.triggerEvent(
       NotificationType.STORE_CONNECTED,
-      'Store Connected',
-      `Store ${newStore.name} (${newStore.type}) was connected successfully.`,
+      'Storefront Onboarded',
+      `Zero-Code Storefront ${newStore.name} (Key: ${newStore.storeKey}) connected successfully!`,
       Severity.INFO,
       { storeId: newStore.id }
     ).catch(console.error);
@@ -70,20 +104,24 @@ export const createStore = async (req: Request, res: Response) => {
     res.status(201).json(formatStore(newStore));
   } catch (error: any) {
     console.error('Error creating store:', error);
-    res.status(500).json({ error: error.message || 'Failed to create Store' });
+    res.status(500).json({ error: error.message || 'Failed to create Storefront' });
   }
 };
 
 export const updateStore = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, url, platform, region } = req.body;
+    const { name, url, platform, storeKey, autoRoutingRule, inventoryCron, pricingCron } = req.body;
 
     await prisma.store.update({
       where: { id },
       data: {
         name: name || undefined,
         type: platform || undefined,
+        storeKey: storeKey || undefined,
+        autoRoutingRule: autoRoutingRule || undefined,
+        inventoryCron: inventoryCron || undefined,
+        pricingCron: pricingCron || undefined,
       },
     });
 
@@ -91,59 +129,67 @@ export const updateStore = async (req: Request, res: Response) => {
       await prisma.storeConfiguration.deleteMany({ where: { storeId: id, key: 'url' } });
       await prisma.storeConfiguration.create({ data: { storeId: id, key: 'url', value: url } });
     }
-    if (region) {
-      await prisma.storeConfiguration.deleteMany({ where: { storeId: id, key: 'region' } });
-      await prisma.storeConfiguration.create({ data: { storeId: id, key: 'region', value: region } });
-    }
 
     const refreshed = await prisma.store.findUnique({
       where: { id },
-      include: { configurations: true }
+      include: { configurations: true, credentials: true },
     });
 
     res.json(formatStore(refreshed));
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to update Store' });
+    res.status(500).json({ error: error.message || 'Failed to update Storefront' });
   }
 };
 
 export const deleteStore = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const store = await prisma.store.findUnique({ where: { id } });
-
     await prisma.store.delete({ where: { id } });
-
-    if (store) {
-      NotificationService.triggerEvent(
-        NotificationType.STORE_DISCONNECTED,
-        'Store Disconnected',
-        `Store ${store.name} was disconnected and deleted.`,
-        Severity.WARNING,
-        { storeId: store.id }
-      ).catch(console.error);
-    }
-
-    res.json({ message: 'Store deleted successfully' });
+    res.json({ message: 'Storefront deleted successfully' });
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to delete Store' });
+    res.status(500).json({ error: error.message || 'Failed to delete Storefront' });
   }
 };
 
-export const syncStore = async (req: Request, res: Response) => {
+// --- Push Sync & Direct Connect Actions ---
+
+export const testStoreConnection = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updated = await prisma.store.update({
-      where: { id },
-      data: {
-        syncStatus: 'synced',
-        connectionStatus: 'active',
-        lastSync: new Date(),
-      },
-      include: { configurations: true }
-    });
-    res.json(formatStore(updated));
+    const result = await StorefrontConnectorService.testConnection(id);
+    res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to sync Store' });
+    res.status(500).json({ error: error.message || 'Failed to connect to Storefront API' });
+  }
+};
+
+export const pushSyncStore = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { syncType } = req.body;
+    const result = await StorefrontConnectorService.pushSyncStore({ storeId: id, syncType });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to execute Direct Push Sync' });
+  }
+};
+
+export const pushInventoryOnly = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await StorefrontConnectorService.pushInventoryOnly(id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to push Inventory' });
+  }
+};
+
+export const pushPricingOnly = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await StorefrontConnectorService.pushPricingOnly(id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to push Pricing' });
   }
 };
