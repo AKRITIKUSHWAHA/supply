@@ -46,6 +46,10 @@ export const WebsiteSync: React.FC = () => {
     storeKey: '',
     autoRoutingRule: 'ALL',
     region: 'North America',
+    apiKey: '',
+    apiSecret: '',
+    inventoryCron: '*/15 * * * *',
+    pricingCron: '0 * * * *',
   })
 
   const handleCreateStore = async (e: React.FormEvent) => {
@@ -67,6 +71,10 @@ export const WebsiteSync: React.FC = () => {
           storeKey: key,
           autoRoutingRule: addFormData.autoRoutingRule,
           region: addFormData.region,
+          apiKey: addFormData.apiKey,
+          apiSecret: addFormData.apiSecret,
+          inventoryCron: addFormData.inventoryCron,
+          pricingCron: addFormData.pricingCron,
         }),
       })
       const created = await res.json()
@@ -726,64 +734,125 @@ export const WebsiteSync: React.FC = () => {
           open
           onClose={() => setAddOpen(false)}
           title="Zero-Code Storefront Onboarding"
-          subtitle="Register direct push API storefront, store routing key, and catalog publication rules"
+          subtitle="Onboard a new storefront without code redevelopment. Configure API credentials, store routing rules, and granular schedules below:"
           size="lg"
         >
           <form onSubmit={handleCreateStore} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Name *</label>
+              <input
+                className="input text-xs"
+                placeholder="e.g., Anchorage Medical Store"
+                value={addFormData.name}
+                onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Storefront Name *</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Platform Connector *</label>
+                <select
+                  className="select font-medium text-xs"
+                  value={addFormData.platform}
+                  onChange={(e) => setAddFormData({ ...addFormData, platform: e.target.value })}
+                >
+                  <option value="Shopify">Shopify Store API</option>
+                  <option value="WooCommerce">WooCommerce REST API</option>
+                  <option value="Shift4Shop">Shift4Shop (3dcart API)</option>
+                  <option value="Custom REST API">Custom Store API Gateway</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Store Routing Key *</label>
                 <input
-                  type="text"
+                  className="input font-mono text-xs"
+                  placeholder="anchorage_med"
+                  value={addFormData.storeKey}
+                  onChange={(e) => setAddFormData({ ...addFormData, storeKey: e.target.value })}
                   required
-                  value={addFormData.name}
-                  onChange={e => setAddFormData({ ...addFormData, name: e.target.value })}
-                  placeholder="e.g. Anchorage Medical Store"
-                  className="input text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Endpoint URL *</label>
+              <input
+                className="input font-mono text-xs"
+                placeholder="https://anchorage-med.myshopify.com"
+                value={addFormData.url}
+                onChange={(e) => setAddFormData({ ...addFormData, url: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Auto-Routing & Product Distribution Rule</label>
+              <select
+                className="select font-medium text-xs"
+                value={addFormData.autoRoutingRule}
+                onChange={(e) => setAddFormData({ ...addFormData, autoRoutingRule: e.target.value })}
+              >
+                <option value="ALL">Push All Master Catalog Products</option>
+                <option value="MEDICAL_ONLY">Route Medical & Healthcare Products Only</option>
+                <option value="RETAIL_ONLY">Route General Retail Products Only</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">API Key / Token (AES Encrypted)</label>
+                <input
+                  className="input font-mono text-xs"
+                  type="password"
+                  placeholder="shpat_1234567890"
+                  value={addFormData.apiKey}
+                  onChange={(e) => setAddFormData({ ...addFormData, apiKey: e.target.value })}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store Platform Type *</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">API Secret Key (AES Encrypted)</label>
+                <input
+                  className="input font-mono text-xs"
+                  type="password"
+                  placeholder="shpss_9876543210"
+                  value={addFormData.apiSecret}
+                  onChange={(e) => setAddFormData({ ...addFormData, apiSecret: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Inventory Sync Schedule</label>
                 <select
-                  value={addFormData.platform}
-                  onChange={e => setAddFormData({ ...addFormData, platform: e.target.value })}
-                  className="select text-xs font-semibold"
+                  className="select font-mono text-xs"
+                  value={addFormData.inventoryCron}
+                  onChange={(e) => setAddFormData({ ...addFormData, inventoryCron: e.target.value })}
                 >
-                  <option value="Shopify">Shopify Direct API</option>
-                  <option value="Shift4Shop">Shift4Shop REST Gateway v2</option>
-                  <option value="WooCommerce">WooCommerce REST API</option>
-                  <option value="Custom API">Custom Ecommerce REST Endpoint</option>
+                  <option value="*/15 * * * *">Every 15 Minutes</option>
+                  <option value="0 * * * *">Every Hour</option>
+                  <option value="0 */6 * * *">Every 6 Hours</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Pricing Sync Schedule</label>
+                <select
+                  className="select font-mono text-xs"
+                  value={addFormData.pricingCron}
+                  onChange={(e) => setAddFormData({ ...addFormData, pricingCron: e.target.value })}
+                >
+                  <option value="0 * * * *">Every Hour</option>
+                  <option value="0 */6 * * *">Every 6 Hours</option>
+                  <option value="0 0 * * *">Daily at Midnight</option>
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store URL *</label>
-                <input
-                  type="text"
-                  required
-                  value={addFormData.url}
-                  onChange={e => setAddFormData({ ...addFormData, url: e.target.value })}
-                  placeholder="https://store.myshopify.com"
-                  className="input text-xs font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store Routing Key *</label>
-                <input
-                  type="text"
-                  value={addFormData.storeKey}
-                  onChange={e => setAddFormData({ ...addFormData, storeKey: e.target.value })}
-                  placeholder="e.g. anchorage_med"
-                  className="input text-xs font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div className="pt-3 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
               <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
               <button type="submit" className="btn-primary flex items-center gap-1.5 shadow-md">
                 <Plus size={14} /> Onboard Storefront
