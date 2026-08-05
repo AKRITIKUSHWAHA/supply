@@ -13,7 +13,7 @@ function formatStore(s: any) {
     id: s.id,
     name: s.name,
     type: s.type || 'Shopify',
-    storeKey: s.storeKey || `store_${s.id.substring(0, 6)}`,
+    storeKey: s.storeKey || `store_${s.id?.substring(0, 6)}`,
     autoRoutingRule: s.autoRoutingRule || 'ALL',
     url: urlConfig || 'https://store.myshopify.com',
     region: regionConfig,
@@ -30,7 +30,7 @@ function formatStore(s: any) {
 
 export const getStores = async (req: Request, res: Response) => {
   try {
-    const rawStores = await prisma.store.findMany({
+    const rawStores = await (prisma.store as any).findMany({
       include: { configurations: true, credentials: true, productMappings: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -44,7 +44,7 @@ export const getStores = async (req: Request, res: Response) => {
 export const getStoreById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const store = await prisma.store.findUnique({
+    const store = await (prisma.store as any).findUnique({
       where: { id },
       include: { configurations: true, credentials: true, productMappings: true },
     });
@@ -64,12 +64,12 @@ export const createStore = async (req: Request, res: Response) => {
     let key = storeKey ? storeKey.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : (name || 'store').toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
     // Ensure unique storeKey
-    const existingStore = await prisma.store.findFirst({ where: { storeKey: key } });
+    const existingStore = await (prisma.store as any).findFirst({ where: { storeKey: key } });
     if (existingStore) {
       key = `${key}_${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
-    const newStore = await prisma.store.create({
+    const newStore: any = await (prisma.store as any).create({
       data: {
         name: name || 'New Storefront',
         type: platform || 'Shopify',
@@ -119,7 +119,7 @@ export const updateStore = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, url, platform, storeKey, autoRoutingRule, inventoryCron, pricingCron } = req.body;
 
-    await prisma.store.update({
+    await (prisma.store as any).update({
       where: { id },
       data: {
         name: name || undefined,
@@ -136,7 +136,7 @@ export const updateStore = async (req: Request, res: Response) => {
       await prisma.storeConfiguration.create({ data: { storeId: id, key: 'url', value: url } });
     }
 
-    const refreshed = await prisma.store.findUnique({
+    const refreshed = await (prisma.store as any).findUnique({
       where: { id },
       include: { configurations: true, credentials: true },
     });
@@ -150,7 +150,7 @@ export const updateStore = async (req: Request, res: Response) => {
 export const deleteStore = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await prisma.store.delete({ where: { id } });
+    await (prisma.store as any).delete({ where: { id } });
     res.json({ message: 'Storefront deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to delete Storefront' });

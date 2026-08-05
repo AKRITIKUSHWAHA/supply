@@ -428,43 +428,37 @@ export const InventorySync: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Inventory Sync Table (Exact Required Columns) */}
+        {/* Main Inventory Sync Table (Streamlined Essential Columns) */}
         <div className="table-container w-full overflow-x-auto scrollbar-thin">
-          <table className="table min-w-[1000px] w-full">
+          <table className="table min-w-[900px] w-full">
             <thead>
               <tr className="bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800">
-                <th className="whitespace-nowrap px-4 py-3.5">PRODUCT NAME</th>
-                <th className="whitespace-nowrap px-4 py-3.5">MASTER SKU</th>
+                <th className="whitespace-nowrap px-4 py-3.5">PRODUCT & SKU</th>
                 <th className="whitespace-nowrap px-4 py-3.5">SUPPLIER</th>
                 <th className="whitespace-nowrap px-4 py-3.5">SUPPLIER STOCK</th>
                 <th className="whitespace-nowrap px-4 py-3.5">SAFETY BUFFER</th>
                 <th className="whitespace-nowrap px-4 py-3.5">AVAILABLE STOCK</th>
-                <th className="whitespace-nowrap px-4 py-3.5">STOREFRONT STOCK</th>
-                <th className="whitespace-nowrap px-4 py-3.5">VARIANCE</th>
                 <th className="whitespace-nowrap px-4 py-3.5">SYNC STATUS</th>
-                <th className="whitespace-nowrap px-4 py-3.5">LAST SYNC</th>
                 <th className="whitespace-nowrap px-4 py-3.5 text-right pr-4">ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
                     No inventory records match your search and filter criteria.
                   </td>
                 </tr>
               ) : (
                 filteredItems.map(row => {
                   const isSyncingRow = syncingItemId === row.id || row.syncStatus === 'Syncing' || syncingAll
-                  const { availableStock, variance, buffer } = getItemCalculations(row)
+                  const { availableStock, buffer } = getItemCalculations(row)
 
                   return (
                     <tr key={row.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                      <td data-label="Product Name" className="whitespace-nowrap px-4 py-3.5">
+                      <td data-label="Product & SKU" className="whitespace-nowrap px-4 py-3.5">
                         <p className="font-bold text-slate-900 dark:text-slate-100 text-xs leading-snug break-words">{row.name}</p>
-                      </td>
-                      <td data-label="Master SKU" className="whitespace-nowrap px-4 py-3.5">
-                        <code className="mono text-xs">{row.sku}</code>
+                        <code className="mono text-[11px] text-slate-400 mt-0.5 block">{row.sku}</code>
                       </td>
                       <td data-label="Supplier" className="whitespace-nowrap px-4 py-3.5">
                         <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">{row.supplier}</span>
@@ -482,25 +476,7 @@ export const InventorySync: React.FC = () => {
                         </button>
                       </td>
                       <td data-label="Available Stock" className="whitespace-nowrap px-4 py-3.5">
-                        <span className="font-extrabold text-slate-900 dark:text-slate-100">{availableStock.toLocaleString()}</span>
-                      </td>
-                      <td data-label="Storefront Stock" className="whitespace-nowrap px-4 py-3.5">
-                        <span className={`font-bold ${row.storefrontStock === availableStock ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                          {row.storefrontStock.toLocaleString()}
-                        </span>
-                      </td>
-                      <td data-label="Variance" className="whitespace-nowrap px-4 py-3.5">
-                        {/* Strictly Color-Coded: Positive = Green, Negative = Red, Zero = Neutral */}
-                        <span className={`inline-flex items-center gap-1 text-xs font-extrabold ${
-                          variance > 0
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : variance < 0
-                            ? 'text-rose-600 dark:text-rose-400'
-                            : 'text-slate-400 dark:text-slate-500'
-                        }`}>
-                          {variance > 0 ? <TrendingUp size={13} /> : variance < 0 ? <TrendingDown size={13} /> : null}
-                          {variance > 0 ? `+${variance}` : variance === 0 ? '0' : variance}
-                        </span>
+                        <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">{availableStock.toLocaleString()}</span>
                       </td>
                       <td data-label="Sync Status" className="whitespace-nowrap px-4 py-3.5">
                         {row.syncStatus === 'Synced' && <Badge variant="success" dot>Synced</Badge>}
@@ -508,9 +484,6 @@ export const InventorySync: React.FC = () => {
                         {row.syncStatus === 'Out of Sync' && <Badge variant="warning" dot>Out of Sync</Badge>}
                         {row.syncStatus === 'Error' && <Badge variant="danger" dot>Error</Badge>}
                         {row.syncStatus === 'Syncing' && <Badge variant="info" dot>Syncing...</Badge>}
-                      </td>
-                      <td data-label="Last Sync" className="whitespace-nowrap px-4 py-3.5">
-                        <span className="text-2xs text-slate-500 dark:text-slate-400 font-mono">{row.lastSync}</span>
                       </td>
                       <td data-label="Action" className="whitespace-nowrap px-4 py-3.5 text-right pr-4">
                         {/* Workflow Action Buttons */}
