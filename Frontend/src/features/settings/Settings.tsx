@@ -620,7 +620,18 @@ export const Settings: React.FC = () => {
 
             <div>
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Active Email Provider</label>
-              <select className="select font-medium" value={emailProvider} onChange={e => setEmailProvider(e.target.value)}>
+              <select
+                className="select font-medium"
+                value={emailProvider}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setEmailProvider(val)
+                  if (val === 'SENDGRID') setSmtpHost('smtp.sendgrid.net')
+                  else if (val === 'SES') setSmtpHost('email-smtp.us-east-1.amazonaws.com')
+                  else if (val === 'MICROSOFT365') setSmtpHost('smtp.office365.com')
+                  else if (val === 'SMTP') setSmtpHost('smtp.sendgrid.net')
+                }}
+              >
                 <option value="SMTP">Standard SMTP Relay</option>
                 <option value="SENDGRID">SendGrid (API / SMTP Driver)</option>
                 <option value="SES">Amazon SES (AWS SDK)</option>
