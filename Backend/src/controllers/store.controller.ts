@@ -61,7 +61,13 @@ export const createStore = async (req: Request, res: Response) => {
   try {
     const { name, url, platform, storeKey, autoRoutingRule, region, apiKey, apiSecret, inventoryCron, pricingCron } = req.body;
 
-    const key = storeKey || name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    let key = storeKey ? storeKey.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : (name || 'store').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+    // Ensure unique storeKey
+    const existingStore = await prisma.store.findFirst({ where: { storeKey: key } });
+    if (existingStore) {
+      key = `${key}_${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
     const newStore = await prisma.store.create({
       data: {
@@ -86,7 +92,7 @@ export const createStore = async (req: Request, res: Response) => {
             secret: apiSecret || '',
             encryptedApiKey: apiKey ? encryptSecret(apiKey) : undefined,
             encryptedSecret: apiSecret ? encryptSecret(apiSecret) : undefined,
-            storeUrl: url,
+            storeUrl: url || 'https://store.myshopify.com',
           },
         },
       },
@@ -99,12 +105,12 @@ export const createStore = async (req: Request, res: Response) => {
       `Zero-Code Storefront ${newStore.name} (Key: ${newStore.storeKey}) connected successfully!`,
       Severity.INFO,
       { storeId: newStore.id }
-    ).catch(console.error);
+    );
 
     res.status(201).json(formatStore(newStore));
   } catch (error: any) {
     console.error('Error creating store:', error);
-    res.status(500).json({ error: error.message || 'Failed to create Storefront' });
+    res.status(400).json({ error: error.message || 'Failed to create Storefront' });
   }
 };
 
