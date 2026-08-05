@@ -99,7 +99,7 @@ export const WebsiteSync: React.FC = () => {
           name: s.name,
           platform: s.platform || 'Shift4Shop',
           url: s.url,
-          connectionStatus: s.status === 'active' ? 'connected' : 'disconnected',
+          connectionStatus: (s.status === 'active' ? 'connected' : 'disconnected') as 'connected' | 'disconnected',
           lastSuccessSync: s.lastSync || 'Never',
           lastFailedSync: null,
           productsPublished: s.productCount || 0,
@@ -374,6 +374,10 @@ export const WebsiteSync: React.FC = () => {
                   storeKey: '',
                   autoRoutingRule: 'ALL',
                   region: 'North America',
+                  apiKey: '',
+                  apiSecret: '',
+                  inventoryCron: '*/15 * * * *',
+                  pricingCron: '0 * * * *',
                 })
                 setAddOpen(true)
               }}
