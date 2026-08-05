@@ -21,6 +21,7 @@ router.delete('/:id', deleteStore);
 
 // Push Sync & Store Connectivity APIs
 router.post('/:id/test-connection', testStoreConnection);
+router.post('/:id/sync', pushSyncStore);
 router.post('/:id/push-sync', pushSyncStore);
 router.post('/:id/push-inventory', pushInventoryOnly);
 router.post('/:id/push-pricing', pushPricingOnly);
