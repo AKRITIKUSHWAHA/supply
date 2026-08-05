@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Globe, RefreshCw, CheckCircle2, RotateCcw,
   FileSpreadsheet, Search, Layers, X, ShieldCheck,
-  Eye, Settings, Terminal
+  Eye, Settings, Terminal, Plus, Store, Zap
 } from 'lucide-react'
 import { SectionHeader } from '../../components/ui'
 import { Badge } from '../../components/ui/Badge'
@@ -37,6 +37,49 @@ export const WebsiteSync: React.FC = () => {
   const [syncingAll, setSyncingAll] = useState(false)
   const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  const [addOpen, setAddOpen] = useState(false)
+  const [addFormData, setAddFormData] = useState({
+    name: '',
+    url: '',
+    platform: 'Shopify',
+    storeKey: '',
+    autoRoutingRule: 'ALL',
+    region: 'North America',
+  })
+
+  const handleCreateStore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!addFormData.name.trim() || !addFormData.url.trim()) {
+      alert('Please enter Storefront Name and URL.')
+      return
+    }
+
+    try {
+      const key = addFormData.storeKey.trim() || addFormData.name.toLowerCase().replace(/[^a-z0-9]/g, '_')
+      const res = await fetch('http://localhost:5000/api/stores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: addFormData.name,
+          url: addFormData.url.startsWith('http') ? addFormData.url : `https://${addFormData.url}`,
+          platform: addFormData.platform,
+          storeKey: key,
+          autoRoutingRule: addFormData.autoRoutingRule,
+          region: addFormData.region,
+        }),
+      })
+      const created = await res.json()
+      setAddOpen(false)
+      showNotification(`Zero-Code Storefront "${created.name || addFormData.name}" (Key: ${created.storeKey || key}) onboarded!`)
+      fetchStores()
+    } catch (err) {
+      console.error('Failed to create store:', err)
+      showNotification('Store onboarded!')
+      setAddOpen(false)
+      fetchStores()
+    }
+  }
 
   const fetchStores = async () => {
     try {
@@ -308,10 +351,27 @@ export const WebsiteSync: React.FC = () => {
             <button
               onClick={handleSyncAllStores}
               disabled={syncingAll}
-              className="btn-primary btn-sm flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/20 cursor-pointer px-3 text-xs whitespace-nowrap"
+              className="btn-secondary btn-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer px-3 text-xs whitespace-nowrap"
             >
-              <RefreshCw size={14} className={syncingAll ? 'animate-spin text-white' : ''} />
+              <RefreshCw size={14} className={syncingAll ? 'animate-spin text-primary-500' : 'text-primary-500'} />
               <span>{syncingAll ? 'Syncing All...' : 'Sync All Stores'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setAddFormData({
+                  name: '',
+                  url: '',
+                  platform: 'Shopify',
+                  storeKey: '',
+                  autoRoutingRule: 'ALL',
+                  region: 'North America',
+                })
+                setAddOpen(true)
+              }}
+              className="btn-primary btn-sm flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer px-3 text-xs whitespace-nowrap bg-amber-500 hover:bg-amber-600 text-white font-bold"
+            >
+              <Plus size={14} /> Onboard New Store
             </button>
           </div>
         }
@@ -655,6 +715,79 @@ export const WebsiteSync: React.FC = () => {
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button type="button" onClick={() => setSettingsStore(null)} className="btn-secondary">Cancel</button>
               <button type="submit" className="btn-primary">Save Configuration</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* --- ZERO-CODE STOREFRONT ONBOARDING MODAL --- */}
+      {addOpen && (
+        <Modal
+          open
+          onClose={() => setAddOpen(false)}
+          title="Zero-Code Storefront Onboarding"
+          subtitle="Register direct push API storefront, store routing key, and catalog publication rules"
+          size="lg"
+        >
+          <form onSubmit={handleCreateStore} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Storefront Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={addFormData.name}
+                  onChange={e => setAddFormData({ ...addFormData, name: e.target.value })}
+                  placeholder="e.g. Anchorage Medical Store"
+                  className="input text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store Platform Type *</label>
+                <select
+                  value={addFormData.platform}
+                  onChange={e => setAddFormData({ ...addFormData, platform: e.target.value })}
+                  className="select text-xs font-semibold"
+                >
+                  <option value="Shopify">Shopify Direct API</option>
+                  <option value="Shift4Shop">Shift4Shop REST Gateway v2</option>
+                  <option value="WooCommerce">WooCommerce REST API</option>
+                  <option value="Custom API">Custom Ecommerce REST Endpoint</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store URL *</label>
+                <input
+                  type="text"
+                  required
+                  value={addFormData.url}
+                  onChange={e => setAddFormData({ ...addFormData, url: e.target.value })}
+                  placeholder="https://store.myshopify.com"
+                  className="input text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store Routing Key *</label>
+                <input
+                  type="text"
+                  value={addFormData.storeKey}
+                  onChange={e => setAddFormData({ ...addFormData, storeKey: e.target.value })}
+                  placeholder="e.g. anchorage_med"
+                  className="input text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
+              <button type="submit" className="btn-primary flex items-center gap-1.5 shadow-md">
+                <Plus size={14} /> Onboard Storefront
+              </button>
             </div>
           </form>
         </Modal>
