@@ -19,7 +19,7 @@ function formatStore(s: any) {
     region: regionConfig,
     status: s.connectionStatus || 'active',
     syncStatus: s.syncStatus || 'synced',
-    productCount: s.productMappings?.length || 0,
+    productCount: s.storeMappings?.length || 0,
     inventoryCron: s.inventoryCron || '*/15 * * * *',
     pricingCron: s.pricingCron || '0 * * * *',
     catalogCron: s.catalogCron || '0 2 * * *',
@@ -31,7 +31,7 @@ function formatStore(s: any) {
 export const getStores = async (req: Request, res: Response) => {
   try {
     const rawStores = await prisma.store.findMany({
-      include: { configurations: true, credentials: true, productMappings: true },
+      include: { configurations: true, credentials: true, storeMappings: true },
       orderBy: { createdAt: 'desc' },
     });
     const data = rawStores.map(formatStore);
@@ -46,7 +46,7 @@ export const getStoreById = async (req: Request, res: Response) => {
     const { id } = req.params;
     const store = await prisma.store.findUnique({
       where: { id },
-      include: { configurations: true, credentials: true, productMappings: true },
+      include: { configurations: true, credentials: true, storeMappings: true },
     });
     if (!store) {
       return res.status(404).json({ error: 'Storefront not found' });
