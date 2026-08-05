@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Key, Server, Clock, Mail, Bell, Shield, Globe, Copy, Check, AlertCircle, Plus, RefreshCw, X, Trash2, QrCode, Lock, Eye, Send, Filter, CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Settings as SettingsIcon, Key, Server, Clock, Mail, Bell, Shield, Globe, Copy, Check, AlertCircle, Plus, RefreshCw, X, Trash2, QrCode, Lock, Eye, Send, Filter, CheckCircle2, ExternalLink } from 'lucide-react'
 import { SectionHeader, Tabs } from '../../components/ui'
 
 interface ApiKeyItem {
@@ -34,8 +35,13 @@ interface IpItem {
 }
 
 export const Settings: React.FC = () => {
+  const navigate = useNavigate()
   const [tab, setTab] = useState('general')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  // Notification Preferences State
+  const [notifPreferences, setNotifPreferences] = useState<any[]>([])
+  const [savingNotifPrefs, setSavingNotifPrefs] = useState(false)
 
   // General Settings state
   const [platformName, setPlatformName] = useState('SupplyBridge Enterprise PIM')
@@ -155,11 +161,49 @@ export const Settings: React.FC = () => {
     }
   }
 
+  const fetchNotifPreferences = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications/preferences')
+      if (res.ok) {
+        const data = await res.json()
+        setNotifPreferences(data || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch notification preferences:', err)
+    }
+  }
+
+  const handleToggleNotifPref = (eventType: string, channel: string) => {
+    setNotifPreferences((prev) =>
+      prev.map((p) => (p.eventType === eventType ? { ...p, [channel]: !p[channel] } : p))
+    )
+  }
+
+  const handleSaveNotifPrefs = async () => {
+    setSavingNotifPrefs(true)
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferences: notifPreferences }),
+      })
+      if (res.ok) {
+        setToastMessage('Notification Preferences Matrix saved successfully!')
+        setTimeout(() => setToastMessage(null), 3000)
+      }
+    } catch (err) {
+      console.error('Failed to save notification preferences:', err)
+    } finally {
+      setSavingNotifPrefs(false)
+    }
+  }
+
   useEffect(() => {
     fetchSettings()
     fetchApiKeys()
     fetchIpWhitelist()
     fetchAuditLogs()
+    fetchNotifPreferences()
   }, [])
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -735,6 +779,102 @@ export const Settings: React.FC = () => {
               </div>
             ))}
             <button onClick={handleSaveSettings} className="btn-primary">Save Scheduler Settings</button>
+          </div>
+        )}
+
+        {/* TAB 7: NOTIFICATIONS PREFERENCES MATRIX */}
+        {tab === 'notifications' && (
+          <div className="card p-6 space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Bell size={18} className="text-amber-500" /> Notification Governance & Alert Preferences Matrix
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Configure which channel alerts (Email, In-App, Slack, Teams, SMS) trigger for specific system events.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate('/notifications')}
+                className="btn-secondary btn-sm flex items-center gap-1.5 font-bold text-xs cursor-pointer"
+              >
+                <ExternalLink size={14} className="text-primary-600 dark:text-primary-400" /> Open In-App Notification Center
+              </button>
+            </div>
+
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-3">System Event Trigger</th>
+                    <th className="p-3 text-center">In-App Alert</th>
+                    <th className="p-3 text-center">Email Alert</th>
+                    <th className="p-3 text-center">MS Teams</th>
+                    <th className="p-3 text-center">Slack</th>
+                    <th className="p-3 text-center">SMS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {notifPreferences.map((pref) => (
+                    <tr key={pref.eventType} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                      <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{pref.name}</td>
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={pref.inAppEnabled}
+                          onChange={() => handleToggleNotifPref(pref.eventType, 'inAppEnabled')}
+                          className="rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={pref.emailEnabled}
+                          onChange={() => handleToggleNotifPref(pref.eventType, 'emailEnabled')}
+                          className="rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={pref.teamsEnabled}
+                          onChange={() => handleToggleNotifPref(pref.eventType, 'teamsEnabled')}
+                          className="rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={pref.slackEnabled}
+                          onChange={() => handleToggleNotifPref(pref.eventType, 'slackEnabled')}
+                          className="rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={pref.smsEnabled}
+                          onChange={() => handleToggleNotifPref(pref.eventType, 'smsEnabled')}
+                          className="rounded cursor-pointer"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={handleSaveNotifPrefs}
+                disabled={savingNotifPrefs}
+                className="btn-primary flex items-center justify-center gap-1.5 font-bold text-xs"
+              >
+                {savingNotifPrefs ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                {savingNotifPrefs ? 'Saving Matrix...' : 'Save Notification Matrix'}
+              </button>
+            </div>
           </div>
         )}
       </div>
