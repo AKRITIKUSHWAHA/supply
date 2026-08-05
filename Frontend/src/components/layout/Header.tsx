@@ -213,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, darkMode, onToggleD
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 h-14 flex items-center px-3 sm:px-4 gap-3 sm:gap-4 transition-colors duration-200">
+      <header className="sticky top-0 z-20 bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-800 h-14 flex items-center px-3 sm:px-4 gap-3 sm:gap-4 transition-colors duration-200">
         {/* Mobile menu & Glowing Brand Badge */}
         <div className="flex items-center gap-2 lg:hidden">
           <button onClick={onMenuClick} className="btn-icon text-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
