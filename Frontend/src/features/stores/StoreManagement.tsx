@@ -425,77 +425,73 @@ export const StoreManagement: React.FC = () => {
         size="lg"
       >
         <form onSubmit={handleCreateStore} className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Name *</label>
-            <input className="input" placeholder="e.g., Anchorage Medical Store" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Platform Connector *</label>
-              <select className="select font-medium" value={formData.platform} onChange={(e) => setFormData({ ...formData, platform: e.target.value })}>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Storefront Name *</label>
+              <input
+                className="input text-xs"
+                placeholder="e.g., Anchorage Medical Store"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store Platform Connector *</label>
+              <select
+                className="select font-semibold text-xs"
+                value={formData.platform}
+                onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+              >
                 <option value="Shopify">Shopify Store API</option>
+                <option value="Shift4Shop">Shift4Shop REST Gateway v2</option>
                 <option value="WooCommerce">WooCommerce REST API</option>
-                <option value="Shift4Shop">Shift4Shop (3dcart API)</option>
-                <option value="Custom REST API">Custom Store API Gateway</option>
+                <option value="Custom REST API">Custom Ecommerce REST Endpoint</option>
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Storefront Endpoint URL *</label>
+              <input
+                className="input text-xs font-mono"
+                placeholder="https://anchorage-med.myshopify.com"
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                required
+              />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Store Routing Key *</label>
-              <input className="input font-mono" placeholder="anchorage_med" value={formData.storeKey} onChange={(e) => setFormData({ ...formData, storeKey: e.target.value })} required />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Store Routing Key *</label>
+              <input
+                className="input text-xs font-mono"
+                placeholder="e.g. anchorage_med"
+                value={formData.storeKey}
+                onChange={(e) => setFormData({ ...formData, storeKey: e.target.value })}
+                required
+              />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Storefront Endpoint URL *</label>
-            <input className="input font-mono" placeholder="https://anchorage-med.myshopify.com" value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} required />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Auto-Routing & Product Distribution Rule</label>
-            <select className="select font-medium" value={formData.autoRoutingRule} onChange={(e) => setFormData({ ...formData, autoRoutingRule: e.target.value })}>
-              <option value="ALL">Push All Master Catalog Products</option>
-              <option value="MEDICAL_ONLY">Route Medical & Healthcare Products Only</option>
-              <option value="RETAIL_ONLY">Route General Retail Products Only</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">API Key / Token (AES Encrypted)</label>
-              <input className="input font-mono text-xs" type="password" placeholder="shpat_1234567890" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">API Secret Key (AES Encrypted)</label>
-              <input className="input font-mono text-xs" type="password" placeholder="shpss_9876543210" value={formData.apiSecret} onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Inventory Sync Schedule</label>
-              <select className="select font-mono text-xs" value={formData.inventoryCron} onChange={(e) => setFormData({ ...formData, inventoryCron: e.target.value })}>
-                <option value="*/15 * * * *">Every 15 Minutes</option>
-                <option value="0 * * * *">Every Hour</option>
-                <option value="0 */6 * * *">Every 6 Hours</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Pricing Sync Schedule</label>
-              <select className="select font-mono text-xs" value={formData.pricingCron} onChange={(e) => setFormData({ ...formData, pricingCron: e.target.value })}>
-                <option value="0 * * * *">Every Hour</option>
-                <option value="0 */6 * * *">Every 6 Hours</option>
-                <option value="0 0 * * *">Daily at Midnight</option>
-              </select>
-            </div>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">API Key / Token (AES Encrypted)</label>
+            <input
+              className="input text-xs font-mono"
+              type="password"
+              placeholder="shpat_1234567890"
+              value={formData.apiKey}
+              onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+            />
           </div>
 
           <div className="pt-3 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
             <button type="button" onClick={() => setAddOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">Onboard Storefront</button>
+            <button type="submit" className="btn-primary flex items-center gap-1.5 shadow-md">
+              + Onboard Storefront
+            </button>
           </div>
         </form>
       </Modal>
