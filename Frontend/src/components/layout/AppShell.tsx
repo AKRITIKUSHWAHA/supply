@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { AlertTriangle, ShieldAlert, RefreshCw, Lock } from 'lucide-react'
+import { AlertTriangle, ShieldAlert, RefreshCw, Lock, LogOut } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { UserProfileModal } from '../ui/UserProfileModal'
@@ -18,41 +18,36 @@ export const AppShell: React.FC = () => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
   const location = useLocation()
-  const { role, setRole } = useAuth()
+  const navigate = useNavigate()
+  const { role, logout } = useAuth()
 
   const checkMaintenanceStatus = async () => {
     try {
       const res = await fetch('http://localhost:5000/api/settings')
-      if (res.ok) {
-        const data = await res.json()
-        if (data && data.maintenanceMode !== undefined) {
-          setMaintenanceMode(Boolean(data.maintenanceMode))
-        }
+      const data = await res.json()
+      if (data && data.maintenanceMode !== undefined) {
+        setMaintenanceMode(data.maintenanceMode)
       }
     } catch (err) {
-      console.error('Failed to fetch maintenance mode status:', err)
+      console.error('Failed to check maintenance status:', err)
     }
   }
 
   useEffect(() => {
     checkMaintenanceStatus()
-    const interval = setInterval(checkMaintenanceStatus, 10000)
 
-    const handleSettingsUpdated = () => checkMaintenanceStatus()
+    const handleSettingsUpdated = () => {
+      checkMaintenanceStatus()
+    }
     window.addEventListener('supplybridge_settings_updated', handleSettingsUpdated)
+    const interval = setInterval(checkMaintenanceStatus, 15000)
 
     return () => {
-      clearInterval(interval)
       window.removeEventListener('supplybridge_settings_updated', handleSettingsUpdated)
+      clearInterval(interval)
     }
   }, [])
 
-  // Close sidebar on route change (mobile)
-  useEffect(() => {
-    setSidebarOpen(false)
-  }, [location.pathname])
-
-  // Sync dark mode class on html & body elements on state change and initial mount
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark')
@@ -66,12 +61,12 @@ export const AppShell: React.FC = () => {
   }, [darkMode])
 
   const toggleDark = () => {
-    setDarkMode(prev => !prev)
+    setDarkMode((prev) => !prev)
   }
 
   const isAdmin = role === 'platform_owner' || role === 'administrator'
 
-  // Non-Admin Maintenance Mode Shield Screen
+  // Non-Admin Maintenance Mode Shield Screen (Enterprise Security Workflow)
   if (maintenanceMode && !isAdmin) {
     return (
       <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
@@ -82,28 +77,31 @@ export const AppShell: React.FC = () => {
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">System Under Maintenance</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              SupplyBridge Enterprise PIM is currently undergoing scheduled maintenance. Non-administrator access is temporarily suspended.
+              SupplyBridge Enterprise PIM is currently undergoing scheduled maintenance. Non-administrator access is temporarily restricted to protect data integrity.
             </p>
           </div>
 
-          <div className="p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
+          <div className="p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700">
             <Lock size={14} className="text-amber-500" />
-            <span>Role: <strong className="capitalize">{role.replace(/_/g, ' ')}</strong> (Blocked)</span>
+            <span>Role: <strong className="capitalize text-slate-900 dark:text-slate-100">{role.replace(/_/g, ' ')}</strong> (Access Restricted)</span>
           </div>
 
-          <div className="pt-2 flex flex-col gap-2">
+          <div className="pt-2 flex flex-col gap-2.5">
             <button
-              onClick={() => setRole('platform_owner')}
-              className="btn-primary w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
+              onClick={checkMaintenanceStatus}
+              className="btn-primary w-full flex items-center justify-center gap-2 py-2.5 font-bold text-xs shadow-md"
             >
-              <ShieldAlert size={16} /> Switch to Admin / Platform Owner
+              <RefreshCw size={15} /> Check System Status
             </button>
 
             <button
-              onClick={checkMaintenanceStatus}
-              className="btn-secondary w-full flex items-center justify-center gap-2 py-2"
+              onClick={() => {
+                logout()
+                navigate('/login')
+              }}
+              className="btn-secondary w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold"
             >
-              <RefreshCw size={15} /> Check System Status
+              <LogOut size={15} /> Logout & Login as Admin
             </button>
           </div>
         </div>
@@ -113,8 +111,7 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100 dark' : 'bg-surface-bg text-slate-900'}`}>
-
-      {/* Mobile Backdrop — click to close sidebar */}
+      {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
@@ -122,7 +119,7 @@ export const AppShell: React.FC = () => {
         />
       )}
 
-      {/* Sidebar — fixed drawer on mobile, always visible on desktop */}
+      {/* Sidebar */}
       <div
         className={`
           fixed inset-y-0 left-0 z-40 w-64 flex-shrink-0
