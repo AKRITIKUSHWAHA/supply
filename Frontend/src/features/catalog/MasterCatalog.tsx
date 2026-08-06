@@ -67,10 +67,10 @@ export const MasterCatalog: React.FC = () => {
     sku: '',
     brand: '',
     categoryName: '',
-    supplierName: 'TechParts International',
-    retailPrice: 99.99,
-    costPrice: 65.0,
-    stock: 50,
+    supplierName: '',
+    retailPrice: 0,
+    costPrice: 0,
+    stock: 0,
     imageUrl: '',
     metaTitle: '',
     metaDescription: '',
@@ -234,10 +234,10 @@ export const MasterCatalog: React.FC = () => {
         sku: '',
         brand: '',
         categoryName: '',
-        supplierName: 'TechParts International',
-        retailPrice: 99.99,
-        costPrice: 65.0,
-        stock: 50,
+        supplierName: '',
+        retailPrice: 0,
+        costPrice: 0,
+        stock: 0,
         imageUrl: '',
         metaTitle: '',
         metaDescription: '',
@@ -807,30 +807,35 @@ export const MasterCatalog: React.FC = () => {
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Retail Price ($)</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Retail Price ($)</label>
               <input
                 type="number"
+                step="0.01"
                 className="input"
-                value={newProduct.retailPrice}
-                onChange={e => setNewProduct({ ...newProduct, retailPrice: Number(e.target.value) })}
+                placeholder="0.00"
+                value={newProduct.retailPrice || ''}
+                onChange={e => setNewProduct({ ...newProduct, retailPrice: e.target.value === '' ? 0 : Number(e.target.value) })}
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Cost Price ($)</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Cost Price ($)</label>
               <input
                 type="number"
+                step="0.01"
                 className="input"
-                value={newProduct.costPrice}
-                onChange={e => setNewProduct({ ...newProduct, costPrice: Number(e.target.value) })}
+                placeholder="0.00"
+                value={newProduct.costPrice || ''}
+                onChange={e => setNewProduct({ ...newProduct, costPrice: e.target.value === '' ? 0 : Number(e.target.value) })}
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Stock</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Stock</label>
               <input
                 type="number"
                 className="input"
-                value={newProduct.stock}
-                onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
+                placeholder="0"
+                value={newProduct.stock || ''}
+                onChange={e => setNewProduct({ ...newProduct, stock: e.target.value === '' ? 0 : Number(e.target.value) })}
               />
             </div>
           </div>
@@ -967,30 +972,35 @@ export const MasterCatalog: React.FC = () => {
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Retail Price ($)</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Retail Price ($)</label>
               <input
                 type="number"
+                step="0.01"
                 className="input"
-                value={newProduct.retailPrice}
-                onChange={e => setNewProduct({ ...newProduct, retailPrice: Number(e.target.value) })}
+                placeholder="0.00"
+                value={newProduct.retailPrice || ''}
+                onChange={e => setNewProduct({ ...newProduct, retailPrice: e.target.value === '' ? 0 : Number(e.target.value) })}
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Cost Price ($)</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Cost Price ($)</label>
               <input
                 type="number"
+                step="0.01"
                 className="input"
-                value={newProduct.costPrice}
-                onChange={e => setNewProduct({ ...newProduct, costPrice: Number(e.target.value) })}
+                placeholder="0.00"
+                value={newProduct.costPrice || ''}
+                onChange={e => setNewProduct({ ...newProduct, costPrice: e.target.value === '' ? 0 : Number(e.target.value) })}
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Stock</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Stock</label>
               <input
                 type="number"
                 className="input"
-                value={newProduct.stock}
-                onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
+                placeholder="0"
+                value={newProduct.stock || ''}
+                onChange={e => setNewProduct({ ...newProduct, stock: e.target.value === '' ? 0 : Number(e.target.value) })}
               />
             </div>
           </div>
