@@ -178,7 +178,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 lg:static lg:translate-x-0 flex flex-col h-full bg-gradient-sidebar border-r border-slate-800/80 transition-transform duration-300 ease-in-out flex-shrink-0",
-          open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          open ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Premium Brand Logo */}

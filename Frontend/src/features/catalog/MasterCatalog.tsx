@@ -340,12 +340,14 @@ export const MasterCatalog: React.FC = () => {
     showNotification('Master Catalog CSV file downloaded!')
   }
 
+  const safeProductsList = (productsList || []).filter(Boolean)
+
   const tabs = [
-    { id: 'all', label: 'All Products', count: productsList.length },
-    { id: 'published', label: 'Published', count: productsList.filter(p => p.status === 'published').length },
-    { id: 'needs_validation', label: 'Needs Validation', count: productsList.filter(p => p.validationStatus === 'failed').length },
-    { id: 'draft', label: 'Draft', count: productsList.filter(p => p.status === 'draft').length },
-    { id: 'failed', label: 'Failed', count: productsList.filter(p => p.status === 'failed').length },
+    { id: 'all', label: 'All Products', count: safeProductsList.length },
+    { id: 'published', label: 'Published', count: safeProductsList.filter(p => p?.status === 'published').length },
+    { id: 'needs_validation', label: 'Needs Validation', count: safeProductsList.filter(p => p?.validationStatus === 'failed').length },
+    { id: 'draft', label: 'Draft', count: safeProductsList.filter(p => p?.status === 'draft').length },
+    { id: 'failed', label: 'Failed', count: safeProductsList.filter(p => p?.status === 'failed').length },
   ]
 
   return (
@@ -410,7 +412,7 @@ export const MasterCatalog: React.FC = () => {
             onChange={v => { setSupplierFilter(v); setCurrentPage(1); }}
             options={[
               { label: 'All Suppliers', value: 'all' },
-              ...suppliersList.map(s => ({ label: s.name, value: s.name }))
+              ...(suppliersList || []).filter(s => s && s.name).map(s => ({ label: s.name, value: s.name }))
             ]}
           />
           <Select
