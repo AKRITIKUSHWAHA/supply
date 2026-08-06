@@ -1,6 +1,7 @@
 import React from 'react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { AccessDenied } from './AccessDenied'
+import { getFirstAccessibleRoute } from '../../utils'
 
 interface ProtectedRouteProps {
   module: string
@@ -8,11 +9,12 @@ interface ProtectedRouteProps {
   children: React.ReactElement
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ module, moduleName, children }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ module, children }) => {
   const { hasPermission } = useAuth()
 
   if (!hasPermission(module)) {
-    return <AccessDenied moduleName={moduleName || module} />
+    const fallbackRoute = getFirstAccessibleRoute(hasPermission)
+    return <Navigate to={fallbackRoute} replace />
   }
 
   return children

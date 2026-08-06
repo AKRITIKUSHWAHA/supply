@@ -7,6 +7,7 @@ import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { UserProfileModal } from '../ui/UserProfileModal'
 import { useAuth } from '../../context/AuthContext'
+import { getFirstAccessibleRoute } from '../../utils'
 
 export const AppShell: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -20,7 +21,14 @@ export const AppShell: React.FC = () => {
   })
   const location = useLocation()
   const navigate = useNavigate()
-  const { role, logout } = useAuth()
+  const { role, hasPermission, logout } = useAuth()
+
+  useEffect(() => {
+    if (location.pathname === '/' && !hasPermission('dashboard')) {
+      const fallback = getFirstAccessibleRoute(hasPermission)
+      navigate(fallback, { replace: true })
+    }
+  }, [role, location.pathname, hasPermission, navigate])
 
   const checkMaintenanceStatus = async () => {
     try {

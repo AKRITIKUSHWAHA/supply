@@ -64,3 +64,31 @@ export function connectionTypeLabel(type: string): string {
 export function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
+
+export function getFirstAccessibleRoute(hasPermission: (module: string) => boolean): string {
+  if (hasPermission('dashboard')) return '/'
+  if (hasPermission('suppliers')) return '/suppliers'
+  if (hasPermission('products') || hasPermission('catalog')) return '/catalog/products'
+  if (hasPermission('categories')) return '/catalog/categories'
+  if (hasPermission('brands')) return '/catalog/brands'
+  if (hasPermission('manufacturers')) return '/catalog/manufacturers'
+  if (hasPermission('variants')) return '/catalog/variants'
+  if (hasPermission('media')) return '/catalog/media'
+  if (hasPermission('integrations')) return '/integrations'
+  if (hasPermission('store_management')) return '/stores'
+  if (hasPermission('mapping')) return '/mapping/products'
+  if (hasPermission('validation')) return '/validation'
+  if (hasPermission('sync_jobs')) return '/sync/jobs'
+  if (hasPermission('inventory_sync')) return '/sync/inventory'
+  if (hasPermission('pricing_sync')) return '/sync/pricing'
+  if (hasPermission('image_sync')) return '/sync/images'
+  if (hasPermission('website_sync')) return '/sync/website'
+  if (hasPermission('reports')) return '/reports'
+  if (hasPermission('logs')) return '/logs'
+  if (hasPermission('monitoring')) return '/monitoring'
+  if (hasPermission('users')) return '/users'
+  if (hasPermission('roles')) return '/roles'
+  if (hasPermission('permissions')) return '/permissions'
+  if (hasPermission('settings')) return '/settings'
+  return '/'
+}
