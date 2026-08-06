@@ -40,9 +40,9 @@ export const Manufacturers: React.FC = () => {
     fetchManufacturers();
   }, [])
 
-  const filtered = manufacturers.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    (m.description && m.description.toLowerCase().includes(search.toLowerCase()))
+  const filtered = (manufacturers || []).filter(m =>
+    (m?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (m?.description && m.description.toLowerCase().includes(search.toLowerCase()))
   )
 
   const handleOpenAdd = () => {

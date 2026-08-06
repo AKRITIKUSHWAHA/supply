@@ -136,10 +136,10 @@ export const Brands: React.FC = () => {
     }
   }
 
-  const filtered = brandsList.filter(
+  const filtered = (brandsList || []).filter(
     b =>
-      b.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.slug.toLowerCase().includes(search.toLowerCase())
+      (b?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (b?.slug || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (

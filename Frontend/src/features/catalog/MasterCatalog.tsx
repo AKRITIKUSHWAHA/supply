@@ -83,12 +83,17 @@ export const MasterCatalog: React.FC = () => {
   }
 
   // --- Filtering ---
-  const filteredProducts = productsList.filter(product => {
+  const filteredProducts = (productsList || []).filter(product => {
+    if (!product) return false
+    const name = product.name || ''
+    const sku = product.sku || ''
+    const brand = product.brand || ''
+
     // Search filter
     const matchesSearch =
-      product.name.toLowerCase().includes(search.toLowerCase()) ||
-      product.sku.toLowerCase().includes(search.toLowerCase()) ||
-      (product.brand && product.brand.toLowerCase().includes(search.toLowerCase()))
+      name.toLowerCase().includes(search.toLowerCase()) ||
+      sku.toLowerCase().includes(search.toLowerCase()) ||
+      brand.toLowerCase().includes(search.toLowerCase())
 
     // Tab filter
     let matchesTab = true
@@ -1102,7 +1107,7 @@ export const MasterCatalog: React.FC = () => {
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
               <p className="font-semibold text-slate-700 uppercase tracking-wider text-2xs">Google Search Engine Preview</p>
               <div className="bg-white p-3 rounded-lg border border-slate-200 font-sans">
-                <p className="text-xs text-slate-400 font-mono truncate">https://pim.supplybridge.com/products/{viewProduct.sku.toLowerCase()}</p>
+                <p className="text-xs text-slate-400 font-mono truncate">https://pim.supplybridge.com/products/{(viewProduct?.sku || '').toLowerCase()}</p>
                 <p className="text-sm text-blue-800 font-medium hover:underline cursor-pointer truncate">
                   {viewProduct.seo?.metaTitle || viewProduct.name}
                 </p>

@@ -190,8 +190,8 @@ export const Variants: React.FC = () => {
     }
   }
 
-  const filtered = variantsList.filter(v =>
-    v.name.toLowerCase().includes(search.toLowerCase())
+  const filtered = (variantsList || []).filter(v =>
+    (v?.name || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (

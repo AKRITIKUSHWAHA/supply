@@ -110,9 +110,9 @@ export const MediaLibrary: React.FC = () => {
     fetchMedia();
   }, [])
 
-  const filtered = assets.filter(a =>
-    a.name.toLowerCase().includes(search.toLowerCase()) ||
-    a.sku.toLowerCase().includes(search.toLowerCase())
+  const filtered = (assets || []).filter(a =>
+    (a?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (a?.sku || '').toLowerCase().includes(search.toLowerCase())
   )
 
   // --- Handlers ---

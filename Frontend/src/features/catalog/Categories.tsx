@@ -134,10 +134,10 @@ export const Categories: React.FC = () => {
   }
 
   // Filter Categories
-  const filtered = categoriesList.filter(
+  const filtered = (categoriesList || []).filter(
     c =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.slug.toLowerCase().includes(search.toLowerCase())
+      (c?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c?.slug || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
