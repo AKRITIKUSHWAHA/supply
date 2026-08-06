@@ -42,6 +42,8 @@ const ROLE_PRESETS: { role: UserRole; label: string; email: string; desc: string
   { role: 'operations_staff',    label: 'Operations Staff',    email: 'dvance@supplybridge.io',   desc: 'Validation Review & Store Sync Operations', color: 'from-amber-600 to-orange-600' },
 ]
 
+
+
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Login form states
   const [email, setEmail] = useState('alex@supplybridge.io')
-  const [password, setPassword] = useState('••••••••••••')
+  const [password, setPassword] = useState('ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó')
   const [selectedRole, setSelectedRole] = useState<UserRole>('platform_owner')
   const [isLoggingIn, setIsLoggingIn] = useState(false)
 
@@ -125,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const perms = permissionsConfig[role] || DEFAULT_ROLE_PERMISSIONS[role] || ['*']
     if (!perms) return false
-    if (perms.length === 0) return false
+    if (perms.length === 0) return false // Empty permissions means NO access
 
     return perms.includes('*') || perms.includes(moduleKey)
   }
@@ -160,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userRole = data.data.user.role.toLowerCase().replace(' ', '_') as UserRole;
         setRole(userRole);
         
+        // Save the permissions fetched from backend for this specific role
         if (data.data.user.permissions) {
           setPermissionsConfig(prev => {
             const nextConfig = { ...prev, [userRole]: data.data.user.permissions }
@@ -186,161 +189,219 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   if (isLoggedOut) {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 overflow-y-auto font-sans text-slate-100">
-        <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 gap-0 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-auto">
-          {/* Left Hero & Role Quick Selector */}
-          <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 via-indigo-950/60 to-slate-900 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/80 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-10" />
+      <div className="min-h-screen lg:h-screen w-full bg-slate-950 flex flex-col lg:flex-row overflow-x-hidden lg:overflow-hidden font-sans">
+        
+        {/* LEFT COLUMN: FULL SCREEN HERO BANNER & PROJECT BRANDING */}
+        <div className="lg:w-7/12 relative min-h-[420px] lg:h-screen flex flex-col justify-between p-6 sm:p-8 lg:p-10 text-white overflow-hidden bg-slate-950 flex-shrink-0">
+          {/* Full Screen Background Cover Image */}
+          <img
+            src="/login_hero_golden.png"
+            alt="SupplyBridge Middleware Architecture"
+            className="absolute inset-0 w-full h-full object-cover z-0 scale-105"
+          />
+          {/* Dark Golden Glass Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-amber-950/40 z-10" />
+          <div className="absolute top-10 left-10 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl z-10" />
 
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 p-[2px]">
-                  <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                    <Zap size={20} className="text-amber-400 fill-amber-400/20 animate-pulse" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-lg font-black tracking-tight text-white">SupplyBridge</h1>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Enterprise PIM</p>
-                </div>
+          {/* Top Brand Header */}
+          <div className="relative z-20">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/30 backdrop-blur-md flex items-center justify-center text-white font-black shadow-glow-primary border border-amber-400/40">
+                <Zap size={22} className="text-amber-400 fill-amber-400/20 animate-pulse" />
               </div>
-
-              <div className="space-y-2 mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Platform Login</h2>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Select a demo profile to test role-based access matrix and PIM operations.
-                </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-black text-white text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-amber-200 bg-clip-text text-transparent">
+                    SupplyBridge
+                  </h1>
+                  <span className="text-[9px] font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs border border-amber-400/40">
+                    PRO v2.4
+                  </span>
+                </div>
+                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Enterprise Middleware & PIM Platform</p>
               </div>
+            </div>
 
-              {/* Role Presets Cards */}
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Demo Profiles</p>
-                {ROLE_PRESETS.map((preset) => (
-                  <button
-                    key={preset.role}
-                    type="button"
-                    onClick={() => handleRoleSelect(preset)}
-                    className={`w-full text-left p-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                      selectedRole === preset.role
-                        ? 'bg-slate-800/90 border-indigo-500/80 shadow-lg shadow-indigo-500/10'
-                        : 'bg-slate-950/40 border-slate-800/80 hover:bg-slate-800/50 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${preset.color} flex items-center justify-center shrink-0 shadow-md`}>
-                        <ShieldCheck size={16} className="text-white" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-bold text-white truncate">{preset.label}</p>
-                          {selectedRole === preset.role && (
-                            <CheckCircle2 size={13} className="text-indigo-400 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-400 truncate">{preset.desc}</p>
-                      </div>
+            <div className="max-w-xl">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white mb-2 leading-tight drop-shadow-md">
+                Centralized Product & Multi-Supplier Hub
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed mb-4 font-medium drop-shadow-sm">
+                Automated multi-supplier data normalization, real-time inventory & pricing pipelines, pre-publication validation, and Shift4Shop storefront publishing engine.
+              </p>
+
+              {/* 4 Feature Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+                {[
+                  { icon: <Database size={15} />, title: 'Master Catalog PIM', desc: 'Single Source of Truth SKU taxonomy & parent/child maps' },
+                  { icon: <RefreshCw size={15} />, title: 'Real-Time Sync Engine', desc: 'Automated API, FTP & file feed inventory/price updates' },
+                  { icon: <Globe size={15} />, title: 'Multi-Store Publishing', desc: 'Shift4Shop API gateway v2 & store-specific allocation' },
+                  { icon: <ShieldCheck size={15} />, title: 'Validation Center', desc: 'Pre-publish error queue & 5-role RBAC permission control' },
+                ].map((f, i) => (
+                  <div key={i} className="flex items-start gap-2.5 text-xs text-white font-bold bg-slate-950/70 backdrop-blur-md p-2.5 rounded-xl border border-amber-500/30 hover:border-amber-400/60 transition-colors">
+                    <span className="text-amber-400 p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 flex-shrink-0">{f.icon}</span>
+                    <div>
+                      <p className="font-extrabold text-amber-200 text-xs mb-0.5">{f.title}</p>
+                      <p className="text-[10px] text-slate-300 font-normal leading-tight">{f.desc}</p>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
-
-            <div className="pt-6 border-t border-slate-800/60 mt-6 flex items-center justify-between text-[11px] text-slate-400">
-              <span className="flex items-center gap-1">
-                <Shield size={12} className="text-emerald-400" /> End-to-End Encrypted
-              </span>
-              <span>v2.4.0 (Enterprise)</span>
-            </div>
           </div>
 
-          {/* Right Interactive Form */}
-          <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center bg-slate-900">
-            <form onSubmit={handleLoginSubmit} className="space-y-5 max-w-md mx-auto w-full">
-              <div className="p-3.5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center gap-3">
-                <UserCheck size={20} className="text-indigo-400 shrink-0" />
-                <div className="text-xs">
-                  <p className="font-semibold text-white">Role Selected: <span className="text-indigo-300 capitalize">{selectedRole.replace(/_/g, ' ')}</span></p>
-                  <p className="text-slate-400 text-[11px]">Signing in with verified enterprise credentials</p>
-                </div>
-              </div>
+          {/* Bottom Live System Telemetry Banner */}
+          <div className="relative z-20 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/20 mt-4">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-glow-emerald" />
+              <span className="text-xs font-bold text-white">Live Data Middleware Active</span>
+              <span className="text-[10px] text-slate-400 font-mono">┬╖ 25 Active Suppliers</span>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-slate-300 font-semibold">
+              <span>Shift4Shop REST API v2</span>
+              <span>┬╖</span>
+              <span>ISO 27001 Certified</span>
+            </div>
+          </div>
+        </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
-                  <Mail size={14} className="text-indigo-400" /> Work Email Address
+        {/* RIGHT COLUMN: FULL SCREEN LOGIN FORM & ROLE SELECTOR */}
+        <div className="lg:w-5/12 bg-white dark:bg-slate-900 p-4 sm:p-6 lg:p-8 flex flex-col justify-center border-l border-slate-200 dark:border-slate-800 relative z-20 lg:h-screen lg:max-h-screen overflow-y-auto">
+          <div className="max-w-md mx-auto w-full my-auto py-2">
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1.5 lg:hidden">
+                <div className="w-7 h-7 rounded-xl bg-amber-500/30 backdrop-blur-md flex items-center justify-center text-white font-black border border-amber-400/40">
+                  <Zap size={15} className="text-amber-400" />
+                </div>
+                <span className="font-black text-slate-900 dark:text-white text-sm">SupplyBridge</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Sign In to Platform</h2>
+              <p className="text-2xs sm:text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">Enter your account credentials or choose a quick demo role to autofill.</p>
+            </div>
+
+            {/* Login Form */}
+            <form onSubmit={handleLoginSubmit} className="space-y-2">
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1 flex items-center gap-1">
+                  <Mail size={12} className="text-slate-400" /> Email Address
                 </label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                  placeholder="user@supplybridge.io"
                   required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="name@supplybridge.io"
+                  className="input py-1.5 px-3 text-xs focus:ring-2 focus:ring-amber-500/20"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-300 flex items-center gap-2">
-                    <Lock size={14} className="text-indigo-400" /> Password
-                  </label>
-                  <span className="text-[11px] text-indigo-400 hover:underline cursor-pointer">Forgot password?</span>
-                </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1 flex items-center gap-1">
+                  <Lock size={12} className="text-slate-400" /> Password
+                </label>
                 <input
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                  placeholder="••••••••••••"
                   required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
+                  className="input py-1.5 px-3 text-xs focus:ring-2 focus:ring-amber-500/20"
                 />
               </div>
 
+              {/* Main Login Button */}
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="btn-primary w-full py-2.5 text-xs sm:text-sm font-bold shadow-md shadow-amber-500/25 mt-1"
               >
                 {isLoggingIn ? (
                   <>
-                    <RefreshCw size={16} className="animate-spin" /> Authenticating...
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Authenticating...
                   </>
                 ) : (
                   <>
-                    Sign In to Dashboard <ArrowRight size={16} />
+                    Sign In to Dashboard <ArrowRight size={15} />
                   </>
                 )}
               </button>
             </form>
+
+            {/* Divider */}
+            <div className="relative my-2.5 text-center">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-800" /></div>
+              <span className="relative px-2 bg-white dark:bg-slate-900 text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">
+                Or Auto-fill Quick Role Preset
+              </span>
+            </div>
+
+            {/* 5 Role Preset Buttons */}
+            <div className="space-y-1.5">
+              {ROLE_PRESETS.map(preset => {
+                const isSelected = selectedRole === preset.role && email === preset.email
+                return (
+                  <button
+                    key={preset.role}
+                    type="button"
+                    onClick={() => handleRoleSelect(preset)}
+                    className={`w-full p-1.5 px-2.5 rounded-lg border text-left transition-all duration-150 flex items-center justify-between gap-2 group ${
+                      isSelected
+                        ? 'bg-amber-50/90 dark:bg-amber-950/80 border-amber-500 dark:border-amber-500 ring-1 ring-amber-500/20'
+                        : 'bg-slate-50/70 dark:bg-slate-800/80 border-slate-200/90 dark:border-slate-700/80 hover:bg-amber-50/50 dark:hover:bg-slate-800 hover:border-amber-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${preset.color} flex items-center justify-center text-white text-[10px] font-bold shadow-2xs flex-shrink-0`}>
+                        {preset.label.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors truncate">
+                            {preset.label}
+                          </p>
+                          {isSelected && <span className="text-[9px] bg-amber-500 text-white font-bold px-1.5 py-0.2 rounded-full flex-shrink-0">Selected</span>}
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{preset.email}</p>
+                      </div>
+                    </div>
+
+                    <span className="text-[11px] text-amber-600 dark:text-amber-400 font-bold opacity-80 group-hover:opacity-100 transition-all flex-shrink-0">
+                      Fill ΓåÆ
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
+
       </div>
     )
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        currentUser,
-        role,
-        setRole,
-        permissionsConfig,
-        updateRolePermission,
-        setBulkRolePermissions,
-        resetPermissionsToDefault,
-        hasPermission,
-        logout,
-        viewProfileUser,
-        setViewProfileUser,
-        openCurrentUserProfile,
-      }}
-    >
+    <AuthContext.Provider value={{
+      currentUser,
+      role,
+      setRole,
+      permissionsConfig,
+      updateRolePermission,
+      setBulkRolePermissions,
+      resetPermissionsToDefault,
+      hasPermission,
+      logout,
+      viewProfileUser,
+      setViewProfileUser,
+      openCurrentUserProfile
+    }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
