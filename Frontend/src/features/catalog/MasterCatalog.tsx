@@ -259,14 +259,14 @@ export const MasterCatalog: React.FC = () => {
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p)
     setNewProduct({
-      name: p.name,
-      sku: p.sku,
+      name: p.name || '',
+      sku: p.sku || '',
       brand: p.brand || '',
       categoryName: p.categoryName || '',
-      supplierName: p.supplierName,
-      retailPrice: p.pricing.retailPrice,
-      costPrice: p.pricing.costPrice,
-      stock: p.inventory.availableStock,
+      supplierName: p.supplierName || '',
+      retailPrice: p.pricing?.retailPrice ?? 0,
+      costPrice: p.pricing?.costPrice ?? 0,
+      stock: p.inventory?.availableStock ?? 0,
       imageUrl: p.images?.[0]?.url || '',
       metaTitle: p.seo?.metaTitle || '',
       metaDescription: p.seo?.metaDescription || '',
@@ -534,7 +534,7 @@ export const MasterCatalog: React.FC = () => {
                     <td data-label="Product">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden shadow-2xs">
-                          {product.images.length > 0 ? (
+                          {product.images && product.images.length > 0 && product.images[0]?.url ? (
                             <img
                               src={product.images[0].url}
                               alt=""
@@ -546,7 +546,7 @@ export const MasterCatalog: React.FC = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-slate-900 dark:text-slate-100 text-sm max-w-[220px] truncate leading-snug">
-                            {product.name}
+                            {product.name || 'Untitled Product'}
                           </p>
                           <p className="text-xs text-slate-400 dark:text-slate-400 font-medium mt-0.5">
                             {product.brand || '—'}
@@ -556,12 +556,12 @@ export const MasterCatalog: React.FC = () => {
                     </td>
                     <td data-label="SKU">
                       <code className="mono text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 whitespace-nowrap inline-block tracking-tight">
-                        {product.sku}
+                        {product.sku || '—'}
                       </code>
                     </td>
                     <td data-label="Supplier">
                       <span className="text-xs text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap">
-                        {product.supplierName}
+                        {product.supplierName || 'Primary Supplier'}
                       </span>
                     </td>
                     <td data-label="Category" className="mobile-hidden">
@@ -572,31 +572,31 @@ export const MasterCatalog: React.FC = () => {
                     <td data-label="Price">
                       <div className="whitespace-nowrap">
                         <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                          ${product.pricing.retailPrice.toFixed(2)}
+                          ${(product.pricing?.retailPrice ?? 0).toFixed(2)}
                         </span>
                         <span className="text-2xs text-emerald-600 dark:text-emerald-400 ml-1.5 font-bold">
-                          +{product.pricing.margin.toFixed(1)}%
+                          +{(product.pricing?.margin ?? 0).toFixed(1)}%
                         </span>
                       </div>
                     </td>
                     <td data-label="Stock">
-                      <Badge variant={statusToVariant(product.inventory.status)}>
-                        {product.inventory.availableStock.toLocaleString()}
+                      <Badge variant={statusToVariant(product.inventory?.status || 'in_stock')}>
+                        {(product.inventory?.availableStock ?? 0).toLocaleString()}
                       </Badge>
                     </td>
                     <td data-label="Status">
-                      <Badge variant={statusToVariant(product.status)}>
-                        {product.status.replace(/_/g, ' ')}
+                      <Badge variant={statusToVariant(product.status || 'published')}>
+                        {(product.status || 'published').replace(/_/g, ' ')}
                       </Badge>
                     </td>
                     <td data-label="Validation" className="mobile-hidden">
-                      <Badge variant={statusToVariant(product.validationStatus)}>
-                        {product.validationStatus}
+                      <Badge variant={statusToVariant(product.validationStatus || 'passed')}>
+                        {product.validationStatus || 'passed'}
                       </Badge>
                     </td>
                     <td data-label="Updated" className="mobile-hidden">
                       <span className="text-xs text-slate-400 dark:text-slate-400 font-mono whitespace-nowrap">
-                        {timeAgo(product.updatedAt)}
+                        {timeAgo(product.updatedAt || new Date().toISOString())}
                       </span>
                     </td>
                     <td data-label="" className="text-center mobile-full">
@@ -707,28 +707,28 @@ export const MasterCatalog: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
               <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
-                {viewProduct.images.length > 0 ? (
+                {viewProduct.images && viewProduct.images.length > 0 && viewProduct.images[0]?.url ? (
                   <img src={viewProduct.images[0].url} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Package size={24} className="text-slate-400" />
                 )}
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-slate-900 text-base">{viewProduct.name}</h4>
-                <p className="text-xs text-slate-500 font-mono mt-0.5">Master SKU: {viewProduct.masterId}</p>
+                <h4 className="font-bold text-slate-900 text-base">{viewProduct.name || 'Untitled Product'}</h4>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">Master SKU: {viewProduct.sku || viewProduct.masterId || '—'}</p>
                 <div className="flex gap-2 mt-2">
-                  <Badge variant={statusToVariant(viewProduct.status)}>{viewProduct.status}</Badge>
-                  <Badge variant={statusToVariant(viewProduct.validationStatus)}>{viewProduct.validationStatus}</Badge>
+                  <Badge variant={statusToVariant(viewProduct.status || 'published')}>{viewProduct.status || 'published'}</Badge>
+                  <Badge variant={statusToVariant(viewProduct.validationStatus || 'passed')}>{viewProduct.validationStatus || 'passed'}</Badge>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
-                { label: 'Retail Price', value: `$${viewProduct.pricing.retailPrice.toFixed(2)}` },
-                { label: 'Cost Price', value: `$${viewProduct.pricing.costPrice.toFixed(2)}` },
-                { label: 'Margin', value: `${viewProduct.pricing.margin.toFixed(1)}%` },
-                { label: 'Available Stock', value: viewProduct.inventory.availableStock.toLocaleString() },
+                { label: 'Retail Price', value: `$${(viewProduct.pricing?.retailPrice ?? 0).toFixed(2)}` },
+                { label: 'Cost Price', value: `$${(viewProduct.pricing?.costPrice ?? 0).toFixed(2)}` },
+                { label: 'Margin', value: `${(viewProduct.pricing?.margin ?? 0).toFixed(1)}%` },
+                { label: 'Available Stock', value: (viewProduct.inventory?.availableStock ?? 0).toLocaleString() },
                 { label: 'Category', value: viewProduct.categoryName || 'General' },
                 { label: 'Brand', value: viewProduct.brand || '—' },
               ].map(item => (
