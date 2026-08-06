@@ -32,6 +32,7 @@ model User {
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  @@map("user")
 }
 
 model Role {
@@ -42,6 +43,7 @@ model Role {
   
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  @@map("role")
 }
 
 model Permission {
@@ -51,6 +53,7 @@ model Permission {
   
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  @@map("permission")
 }
 
 model RolePermission {
@@ -61,6 +64,7 @@ model RolePermission {
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+  @@map("rolepermission")
 }
 
 model Department {
@@ -70,6 +74,7 @@ model Department {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@map("department")
 }
 
 model Session {
@@ -82,6 +87,7 @@ model Session {
   expiresAt DateTime
   
   createdAt DateTime @default(now())
+  @@map("session")
 }
 
 model RefreshToken {
@@ -93,6 +99,7 @@ model RefreshToken {
   revoked   Boolean  @default(false)
   
   createdAt DateTime @default(now())
+  @@map("refreshtoken")
 }
 
 model ActivityLog {
@@ -108,6 +115,7 @@ model ActivityLog {
   ipAddress   String?
   
   createdAt   DateTime @default(now())
+  @@map("activitylog")
 }
 
 model IpWhitelist {
@@ -118,6 +126,7 @@ model IpWhitelist {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  @@map("ipwhitelist")
 }
 
 model EmailConfig {
@@ -134,6 +143,7 @@ model EmailConfig {
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  @@map("emailconfig")
 }
 
 model SystemSetting {
@@ -143,6 +153,7 @@ model SystemSetting {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@map("systemsetting")
 }
 
 // ==========================================
@@ -169,6 +180,7 @@ model Supplier {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   deletedAt         DateTime?
+  @@map("supplier")
 }
 
 model SupplierConnection {
@@ -183,6 +195,8 @@ model SupplierConnection {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("supplierconnection")
+
 }
 
 model SupplierCredential {
@@ -197,6 +211,7 @@ model SupplierCredential {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("suppliercredential")
 }
 
 model SupplierSync {
@@ -210,6 +225,7 @@ model SupplierSync {
   imageStatus       String?
   
   createdAt         DateTime  @default(now())
+  @@map("suppliersync")
 }
 
 model SupplierLog {
@@ -221,6 +237,7 @@ model SupplierLog {
   status            String
   
   createdAt         DateTime  @default(now())
+  @@map("supplierlog")
 }
 
 model SupplierSchedule {
@@ -232,6 +249,7 @@ model SupplierSchedule {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("supplierschedule")
 }
 
 // --- Product Information Management ---
@@ -273,6 +291,7 @@ model Product {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
+  @@map("product")
 }
 
 model Category {
@@ -291,6 +310,7 @@ model Category {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("category")
 }
 
 model Brand {
@@ -306,6 +326,7 @@ model Brand {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("brand")
 }
 
 model Manufacturer {
@@ -319,6 +340,7 @@ model Manufacturer {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("manufacturer")
 }
 
 model Variant {
@@ -340,6 +362,7 @@ model Variant {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("variant")
 }
 
 model Attribute {
@@ -353,6 +376,7 @@ model Attribute {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("attribute")
 }
 
 model Media {
@@ -364,6 +388,7 @@ model Media {
   size              Int?
   
   createdAt         DateTime  @default(now())
+  @@map("media")
 }
 
 model ProductImage {
@@ -375,6 +400,7 @@ model ProductImage {
   order             Int       @default(0)
   
   createdAt         DateTime  @default(now())
+  @@map("productimage")
 }
 
 model ProductPrice {
@@ -390,6 +416,7 @@ model ProductPrice {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("productprice")
 }
 
 model Inventory {
@@ -404,6 +431,7 @@ model Inventory {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("inventory")
 }
 
 // --- Store Management ---
@@ -431,6 +459,7 @@ model Store {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("store")
 }
 
 model StoreConfiguration {
@@ -442,6 +471,7 @@ model StoreConfiguration {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("storeconfiguration")
 }
 
 model StoreCredential {
@@ -458,6 +488,7 @@ model StoreCredential {
   
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+  @@map("storecredential")
 }
 
 model ProductStoreMapping {
@@ -474,6 +505,7 @@ model ProductStoreMapping {
   updatedAt          DateTime  @updatedAt
 
   @@unique([productId, storeId])
+  @@map("productstoremapping")
 }
 
 // --- Data Mapping & Import Engine ---
@@ -488,6 +520,7 @@ model CategoryMapping {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("categorymapping")
 }
 
 model BrandMapping {
@@ -501,6 +534,7 @@ model BrandMapping {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("brandmapping")
 }
 
 model VariantMapping {
@@ -514,6 +548,7 @@ model VariantMapping {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("variantmapping")
 }
 
 model AttributeMapping {
@@ -527,6 +562,7 @@ model AttributeMapping {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("attributemapping")
 }
 
 model ProductMapping {
@@ -540,6 +576,7 @@ model ProductMapping {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("productmapping")
 }
 
 model ImportJob {
@@ -553,6 +590,7 @@ model ImportJob {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("importjob")
 }
 
 
@@ -570,6 +608,7 @@ model ValidationRule {
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  @@map("validationrule")
 }
 
 model ValidationLog {
@@ -581,6 +620,7 @@ model ValidationLog {
   
   createdAt         DateTime  @default(now())
   resolvedAt        DateTime?
+  @@map("validationlog")
 }
 
 model JobLog {
@@ -594,6 +634,7 @@ model JobLog {
   
   createdAt         DateTime  @default(now())
   completedAt       DateTime?
+  @@map("joblog")
 }
 
 model PublishingLog {
@@ -604,6 +645,7 @@ model PublishingLog {
   details           String?   @db.Text
   
   createdAt         DateTime  @default(now())
+  @@map("publishinglog")
 }
 
 
@@ -621,6 +663,7 @@ model PricingRule {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  @@map("pricingrule")
 }
 
 model PricingAudit {
@@ -635,6 +678,7 @@ model PricingAudit {
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  @@map("pricingaudit")
 }
 
 model IntegrationProtocol {
@@ -654,6 +698,7 @@ model IntegrationProtocol {
   encoding      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  @@map("integrationprotocol")
 }
 
 model IntegrationEvent {
@@ -664,6 +709,7 @@ model IntegrationEvent {
   time          String
   ok            Boolean  @default(true)
   createdAt     DateTime @default(now())
+@@map("integrationevent")
 }
 
 // ==========================================
@@ -725,6 +771,7 @@ enum NotificationType {
   VALIDATION_ERROR
   CRITICAL_SYSTEM_ERROR
   SUCCESSFUL_SYNC
+  @@map("notificationtype")
 }
 
 enum Severity {
@@ -732,6 +779,7 @@ enum Severity {
   WARNING
   ERROR
   CRITICAL
+  @@map("severity")
 }
 
 model Notification {
@@ -751,6 +799,7 @@ model Notification {
   
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  @@map("notification")
 }
 
 model NotificationPreference {
@@ -768,6 +817,7 @@ model NotificationPreference {
   updatedAt    DateTime @updatedAt
 
   @@unique([userId, role, eventType])
+  @@map("notificationpreference")
 }
 
 model ApiKey {
@@ -783,5 +833,6 @@ model ApiKey {
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  @@map("apikey")
 }
 

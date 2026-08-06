@@ -1,6 +1,6 @@
 import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Building2, Edit3, Trash2, CheckCircle2 } from 'lucide-react'
+import { Plus, Building2, Edit3, Trash2, AlertCircle } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { SectionHeader, FilterBar } from '../../components/ui'
@@ -17,6 +17,8 @@ export const Manufacturers: React.FC = () => {
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   
   const [formData, setFormData] = useState({
     name: '',
@@ -48,12 +50,14 @@ export const Manufacturers: React.FC = () => {
   const handleOpenAdd = () => {
     setEditingId(null)
     setFormData({ name: '', description: '', status: 'active' })
+    setFormError(null)
     setModalOpen(true)
   }
 
   const handleOpenEdit = (m: Manufacturer) => {
     setEditingId(m.id)
     setFormData({ name: m.name, description: m.description || '', status: m.status })
+    setFormError(null)
     setModalOpen(true)
   }
 
@@ -70,29 +74,47 @@ export const Manufacturers: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim()) return
+    if (!formData.name.trim()) {
+      setFormError('Manufacturer name is required.')
+      return
+    }
+
+    setSaving(true)
+    setFormError(null)
 
     try {
-      if (editingId) {
-        await fetch(`${API_BASE_URL}/api/manufacturers/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
-      } else {
-        await fetch(`${API_BASE_URL}/api/manufacturers`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
+      const url = editingId 
+        ? `${API_BASE_URL}/api/manufacturers/${editingId}`
+        : `${API_BASE_URL}/api/manufacturers`
+      const method = editingId ? 'PUT' : 'POST'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          description: formData.description.trim(),
+          status: formData.status
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFormError(data.error || 'Failed to save manufacturer.');
+        setSaving(false);
+        return;
       }
+
       await fetchManufacturers();
-    } catch (err) {
-      console.error(err);
+      setModalOpen(false);
+      setEditingId(null);
+      setFormData({ name: '', description: '', status: 'active' });
+    } catch (err: any) {
+      setFormError(err.message || 'Network error occurred while saving manufacturer.');
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false)
-    setEditingId(null)
-    setFormData({ name: '', description: '', status: 'active' })
   }
 
   return (
@@ -191,13 +213,23 @@ export const Manufacturers: React.FC = () => {
         size="md"
       >
         <form onSubmit={handleSave} className="space-y-4">
+          {formError && (
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2.5">
+              <AlertCircle size={16} className="text-rose-500 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">Manufacturer Name *</label>
             <input
               type="text"
               required
               value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              onChange={e => {
+                setFormData({ ...formData, name: e.target.value })
+                setFormError(null)
+              }}
               placeholder="e.g. Bosch Automotive Global"
               className="input"
             />
@@ -227,11 +259,14 @@ export const Manufacturers: React.FC = () => {
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" className="btn-primary">Save Manufacturer</button>
+            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary" disabled={saving}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : 'Save Manufacturer'}
+            </button>
           </div>
         </form>
       </Modal>
     </div>
   )
 }
+
