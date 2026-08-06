@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useRef, useEffect } from 'react'
 import { Image, Upload, Search, Edit2, Trash2, Eye, RefreshCw, X } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
@@ -95,7 +96,7 @@ export const MediaLibrary: React.FC = () => {
 
   const fetchMedia = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/media');
+      const res = await fetch(`${API_BASE_URL}/api/media`);
       if (res.ok) {
         const data = await res.json();
         setAssets(data);
@@ -142,7 +143,7 @@ export const MediaLibrary: React.FC = () => {
       return
     }
     try {
-      const res = await fetch('http://localhost:5000/api/media', {
+      const res = await fetch(`${API_BASE_URL}/api/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -190,7 +191,7 @@ export const MediaLibrary: React.FC = () => {
     e.preventDefault()
     if (!editingAsset) return
     try {
-      const res = await fetch(`http://localhost:5000/api/media/${editingAsset.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/media/${editingAsset.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -212,7 +213,7 @@ export const MediaLibrary: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/media/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/media/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

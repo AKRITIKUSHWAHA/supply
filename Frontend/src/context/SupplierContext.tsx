@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config/api'
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import type { Supplier } from '../types'
 
@@ -14,7 +15,7 @@ export const SupplierProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const refreshSuppliers = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/suppliers')
+      const res = await fetch(`${API_BASE_URL}/api/suppliers`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setSuppliersList(data)

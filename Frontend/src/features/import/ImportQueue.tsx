@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Download, CheckCircle2, XCircle, RefreshCw, RotateCcw, AlertCircle, FileSpreadsheet, Clock, ArrowDownCircle, UploadCloud, Eye, Zap, Layers } from 'lucide-react'
@@ -32,7 +33,7 @@ export const ImportQueue: React.FC = () => {
   const [tab, setTab] = useState('all')
 
   React.useEffect(() => {
-    fetch('http://localhost:5000/api/imports')
+    fetch(`${API_BASE_URL}/api/imports`)
       .then(res => res.json())
       .then(data => setImportsList(Array.isArray(data) ? data : []))
       .catch(console.error)
@@ -64,7 +65,7 @@ export const ImportQueue: React.FC = () => {
     showNotification('Parsing supplier feed & validating schema...')
 
     try {
-      const res = await fetch('http://localhost:5000/api/imports', {
+      const res = await fetch(`${API_BASE_URL}/api/imports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,7 +90,7 @@ export const ImportQueue: React.FC = () => {
   const handleRetry = async (id: string, sName: string) => {
     showNotification(`Retrying import feed for ${sName}...`)
     try {
-      const res = await fetch(`http://localhost:5000/api/imports/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/imports/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,7 +113,7 @@ export const ImportQueue: React.FC = () => {
     const failedImports = importsList.filter(i => i.status === 'failed')
     for (const job of failedImports) {
       try {
-        const res = await fetch(`http://localhost:5000/api/imports/${job.id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/imports/${job.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -135,7 +136,7 @@ export const ImportQueue: React.FC = () => {
 
   const handleCancel = async (id: string, sName: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/imports/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/imports/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

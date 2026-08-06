@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config/api'
 import React, { createContext, useContext, useState } from 'react'
 import type { Product } from '../types'
 
@@ -12,7 +13,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [productsList, setProductsList] = useState<Product[]>([])
 
   React.useEffect(() => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE_URL}/api/products`)
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data)) {

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Settings as SettingsIcon, Key, Server, Clock, Mail, Bell, Shield, Globe, Copy, Check, AlertCircle, Plus, RefreshCw, X, Trash2, QrCode, Lock, Eye, Send, Filter, CheckCircle2, ExternalLink } from 'lucide-react'
@@ -96,7 +97,7 @@ export const Settings: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/settings')
+      const res = await fetch(`${API_BASE_URL}/api/settings`)
       const data = await res.json()
       if (data) {
         if (data.platformName) setPlatformName(data.platformName)
@@ -120,7 +121,7 @@ export const Settings: React.FC = () => {
   const fetchApiKeys = async () => {
     setLoadingKeys(true)
     try {
-      const res = await fetch('http://localhost:5000/api/apikeys')
+      const res = await fetch(`${API_BASE_URL}/api/apikeys`)
       if (res.ok) {
         const data = await res.json()
         setApiKeys(data)
@@ -134,7 +135,7 @@ export const Settings: React.FC = () => {
 
   const fetchIpWhitelist = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/security/ip-whitelist')
+      const res = await fetch(`${API_BASE_URL}/api/security/ip-whitelist`)
       if (res.ok) {
         const data = await res.json()
         setIpList(data.ips || [])
@@ -147,7 +148,7 @@ export const Settings: React.FC = () => {
 
   const fetchAuditLogs = async () => {
     try {
-      const url = new URL('http://localhost:5000/api/security/audit-logs')
+      const url = new URL(`${API_BASE_URL}/api/security/audit-logs`)
       if (logSearch) url.searchParams.append('search', logSearch)
       if (logActionFilter !== 'all') url.searchParams.append('action', logActionFilter)
 
@@ -163,7 +164,7 @@ export const Settings: React.FC = () => {
 
   const fetchNotifPreferences = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/notifications/preferences')
+      const res = await fetch(`${API_BASE_URL}/api/notifications/preferences`)
       if (res.ok) {
         const data = await res.json()
         setNotifPreferences(data || [])
@@ -182,7 +183,7 @@ export const Settings: React.FC = () => {
   const handleSaveNotifPrefs = async () => {
     setSavingNotifPrefs(true)
     try {
-      const res = await fetch('http://localhost:5000/api/notifications/preferences', {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/preferences`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferences: notifPreferences }),
@@ -212,7 +213,7 @@ export const Settings: React.FC = () => {
     setSaveError(null)
 
     try {
-      const res = await fetch('http://localhost:5000/api/settings', {
+      const res = await fetch(`${API_BASE_URL}/api/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -252,7 +253,7 @@ export const Settings: React.FC = () => {
   const handleSendTestEmail = async () => {
     setSendingTestEmail(true)
     try {
-      const res = await fetch('http://localhost:5000/api/settings/test-email', {
+      const res = await fetch(`${API_BASE_URL}/api/settings/test-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetEmail: smtpFromEmail }),
@@ -274,7 +275,7 @@ export const Settings: React.FC = () => {
   // 2FA Handlers
   const handleStart2FA = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/security/2fa/setup', { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/security/2fa/setup`, { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
         setTwoFactorSecret(data.secret)
@@ -292,7 +293,7 @@ export const Settings: React.FC = () => {
     setTwoFactorError(null)
 
     try {
-      const res = await fetch('http://localhost:5000/api/security/2fa/verify', {
+      const res = await fetch(`${API_BASE_URL}/api/security/2fa/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: totpInputCode, secret: twoFactorSecret }),
@@ -317,7 +318,7 @@ export const Settings: React.FC = () => {
     if (!newIpAddress.trim()) return
 
     try {
-      const res = await fetch('http://localhost:5000/api/security/ip-whitelist', {
+      const res = await fetch(`${API_BASE_URL}/api/security/ip-whitelist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ipAddress: newIpAddress, description: newIpDesc }),
@@ -337,7 +338,7 @@ export const Settings: React.FC = () => {
 
   const handleDeleteIp = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/security/ip-whitelist/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API_BASE_URL}/api/security/ip-whitelist/${id}`, { method: 'DELETE' })
       if (res.ok) {
         fetchIpWhitelist()
       }
@@ -352,7 +353,7 @@ export const Settings: React.FC = () => {
     if (!newKeyName.trim()) return
 
     try {
-      const res = await fetch('http://localhost:5000/api/apikeys/generate', {
+      const res = await fetch(`${API_BASE_URL}/api/apikeys/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -379,7 +380,7 @@ export const Settings: React.FC = () => {
 
   const handleRevokeApiKey = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/apikeys/${id}/revoke`, { method: 'PUT' })
+      const res = await fetch(`${API_BASE_URL}/api/apikeys/${id}/revoke`, { method: 'PUT' })
       if (res.ok) {
         setToastMessage('API Key revoked')
         fetchApiKeys()
@@ -392,7 +393,7 @@ export const Settings: React.FC = () => {
 
   const handleRegenerateApiKey = async (id: string, name: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/apikeys/${id}/regenerate`, { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/apikeys/${id}/regenerate`, { method: 'POST' })
       if (res.ok) {
         const data = await res.json()
         fetchApiKeys()
@@ -408,7 +409,7 @@ export const Settings: React.FC = () => {
 
   const handleDeleteApiKey = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/apikeys/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API_BASE_URL}/api/apikeys/${id}`, { method: 'DELETE' })
       if (res.ok) {
         setToastMessage('API Key deleted')
         fetchApiKeys()

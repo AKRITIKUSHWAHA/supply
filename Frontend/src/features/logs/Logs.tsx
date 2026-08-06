@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -45,7 +46,7 @@ export const Logs: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/logs')
+      const res = await fetch(`${API_BASE_URL}/api/logs`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setLogsList(data)
@@ -103,7 +104,7 @@ export const Logs: React.FC = () => {
   // Clear All System Logs
   const handleClearLogs = async () => {
     try {
-      await fetch('http://localhost:5000/api/logs/clear', { method: 'DELETE' })
+      await fetch(`${API_BASE_URL}/api/logs/clear`, { method: 'DELETE' })
       setLogsList([])
       setActivitiesList([])
       showNotification('All system logs cleared successfully!')

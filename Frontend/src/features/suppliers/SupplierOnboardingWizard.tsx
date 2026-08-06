@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Truck, CheckCircle2, ArrowRight, ArrowLeft, RefreshCw, Shield, Database, Sliders, Check, Server, Key, Mail, User, Phone, Globe, Clock, Layers } from 'lucide-react'
@@ -54,7 +55,7 @@ export const SupplierOnboardingWizard: React.FC = () => {
     setIsTesting(true)
     setTestSuccess(false)
     try {
-      const res = await fetch('http://localhost:5000/api/suppliers/test-connection', {
+      const res = await fetch(`${API_BASE_URL}/api/suppliers/test-connection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,7 +91,7 @@ export const SupplierOnboardingWizard: React.FC = () => {
 
   const handleFinish = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/suppliers', {
+      const res = await fetch(`${API_BASE_URL}/api/suppliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

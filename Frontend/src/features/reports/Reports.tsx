@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart3, Download, Calendar, TrendingUp, CheckCircle2, FileSpreadsheet, FileText, Package, RefreshCw, AlertTriangle, ShieldCheck, Truck, Database, ChevronDown } from 'lucide-react'
@@ -22,11 +23,11 @@ export const Reports: React.FC = () => {
   const [inventoryChanges, setInventoryChanges] = useState<any[]>([])
   const [newProducts, setNewProducts] = useState<any[]>([])
   const [publishingActivity, setPublishingActivity] = useState<any[]>([])
-  const [summaryStats, setSummaryStats] = useState({ totalSuppliers: 0, totalProducts: 0, totalCategories: 0, totalValidationIssues: 0 })
+  const [summaryStats, setSummaryStats] = useState({ totalSuppliers: 0, totalProducts: 0, totalCategories: 0, totalValidationIssues: 0, passRate: '100%' })
 
   const fetchReports = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/reports')
+      const res = await fetch(`${API_BASE_URL}/api/reports`)
       const data = await res.json()
       if (data) {
         if (data.supplierData) setSupplierData(data.supplierData)

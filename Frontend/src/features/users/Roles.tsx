@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Edit, Trash2, Users, UserCog, Shield, CheckCircle2, Lock, Save, X, Building, ShieldAlert, KeyRound, Clock, Eye, Edit3 } from 'lucide-react'
@@ -57,7 +58,7 @@ export const Roles: React.FC = () => {
 
   const fetchRoles = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/roles')
+      const res = await fetch(`${API_BASE_URL}/api/roles`)
       const json = await res.json()
       if (json && json.data && Array.isArray(json.data.roles)) {
         const mapped = json.data.roles.map((r: any) => ({
@@ -144,7 +145,7 @@ export const Roles: React.FC = () => {
     if (!selectedRole || !formName.trim()) return
 
     try {
-      const res = await fetch(`http://localhost:5000/api/roles/${selectedRole.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/roles/${selectedRole.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

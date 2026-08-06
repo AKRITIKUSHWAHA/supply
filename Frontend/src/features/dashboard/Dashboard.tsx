@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -131,7 +132,7 @@ export const Dashboard: React.FC = () => {
 
   const loadStats = () => {
     setIsRefreshing(true)
-    fetch('http://localhost:5000/api/dashboard/stats')
+    fetch(`${API_BASE_URL}/api/dashboard/stats`)
       .then(res => res.json())
       .then(data => {
         setM(prev => ({

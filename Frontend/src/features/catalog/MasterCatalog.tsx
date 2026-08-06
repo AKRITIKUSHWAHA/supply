@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -177,7 +178,7 @@ export const MasterCatalog: React.FC = () => {
   // --- Single Actions ---
   const handleSingleDelete = async (id: string, name: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API_BASE_URL}/api/products/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete')
       setProductsList(prev => prev.filter(p => p.id !== id))
       showNotification(`Product "${name}" deleted.`)
@@ -195,7 +196,7 @@ export const MasterCatalog: React.FC = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/products', {
+      const res = await fetch(`${API_BASE_URL}/api/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -273,7 +274,7 @@ export const MasterCatalog: React.FC = () => {
     if (!editingProduct) return
 
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${editingProduct.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/products/${editingProduct.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

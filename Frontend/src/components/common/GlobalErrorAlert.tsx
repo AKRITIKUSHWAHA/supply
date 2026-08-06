@@ -19,8 +19,18 @@ declare global {
 export const GlobalErrorAlertContainer: React.FC = () => {
   const [alerts, setAlerts] = useState<AlertEvent[]>([])
 
-  const addAlert = (message: string, title: string = 'System Alert', type: 'error' | 'warning' | 'info' | 'success' = 'error') => {
+  const formatString = (val: any, fallback: string = ''): string => {
+    if (typeof val === 'string') return val
+    if (val && typeof val === 'object') {
+      return val.message || val.error || JSON.stringify(val)
+    }
+    return val ? String(val) : fallback
+  }
+
+  const addAlert = (rawMessage: any, rawTitle: any = 'System Alert', type: 'error' | 'warning' | 'info' | 'success' = 'error') => {
     const id = Math.random().toString(36).substring(2, 9)
+    const title = formatString(rawTitle, 'System Alert')
+    const message = formatString(rawMessage, 'An unexpected system alert occurred.')
     const newAlert: AlertEvent = { id, title, message, type }
 
     setAlerts(prev => [newAlert, ...prev].slice(0, 4)) // Keep max 4 floating alerts
@@ -37,31 +47,29 @@ export const GlobalErrorAlertContainer: React.FC = () => {
 
   useEffect(() => {
     // Expose global alert helpers on window object
-    window.showErrorAlert = (message: string, title: string = 'Error Occurred') => {
+    window.showErrorAlert = (message: any, title: any = 'Error Occurred') => {
       addAlert(message, title, 'error')
     }
 
-    window.showSuccessAlert = (message: string, title: string = 'Success') => {
+    window.showSuccessAlert = (message: any, title: any = 'Success') => {
       addAlert(message, title, 'success')
     }
 
-    window.showWarningAlert = (message: string, title: string = 'Warning') => {
+    window.showWarningAlert = (message: any, title: any = 'Warning') => {
       addAlert(message, title, 'warning')
     }
 
     // Window global error listener (Catches unhandled runtime JS crashes)
     const handleGlobalError = (event: ErrorEvent) => {
       console.error('[GlobalErrorAlert] Unhandled Exception:', event.error || event.message)
-      const errorMsg = event.message || 'An unexpected client runtime exception occurred.'
+      const errorMsg = formatString(event.error || event.message, 'An unexpected client runtime exception occurred.')
       window.showErrorAlert(errorMsg, 'Application Runtime Error')
     }
 
     // Window global unhandled promise rejection listener
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('[GlobalErrorAlert] Unhandled Rejection:', event.reason)
-      const reasonMsg = typeof event.reason === 'string' 
-        ? event.reason 
-        : event.reason?.message || 'Async promise execution encountered an error.'
+      const reasonMsg = formatString(event.reason, 'Async promise execution encountered an error.')
       window.showErrorAlert(reasonMsg, 'Unhandled API / Async Rejection')
     }
 

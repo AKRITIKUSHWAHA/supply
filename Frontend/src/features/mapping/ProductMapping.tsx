@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { Edit2, Trash2, Plus } from 'lucide-react'
 import { SectionHeader, FilterBar, Select, ConfirmDialog } from '../../components/ui'
@@ -26,7 +27,7 @@ export const ProductMapping: React.FC = () => {
 
   const fetchMappings = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/mappings/products')
+      const res = await fetch(`${API_BASE_URL}/api/mappings/products`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setItems(data)
@@ -56,7 +57,7 @@ export const ProductMapping: React.FC = () => {
     e.preventDefault()
     if (!newMapping.supplierSku.trim()) return
     try {
-      const res = await fetch('http://localhost:5000/api/mappings/products', {
+      const res = await fetch(`${API_BASE_URL}/api/mappings/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,7 +85,7 @@ export const ProductMapping: React.FC = () => {
     if (!editingItem) return
     const updatedSku = editMasterSku.trim()
     try {
-      const res = await fetch(`http://localhost:5000/api/mappings/products/${editingItem.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/mappings/products/${editingItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,7 +105,7 @@ export const ProductMapping: React.FC = () => {
   const handleDelete = async () => {
     if (!deletingId) return
     try {
-      await fetch(`http://localhost:5000/api/mappings/products/${deletingId}`, { method: 'DELETE' })
+      await fetch(`${API_BASE_URL}/api/mappings/products/${deletingId}`, { method: 'DELETE' })
       setItems(prev => prev.filter(i => i.id !== deletingId))
     } catch (err) {
       console.error('Failed to delete product mapping:', err)

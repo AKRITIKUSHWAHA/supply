@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Edit2, Trash2, Layers, CheckCircle2, X, Sliders, Tag, Sparkles } from 'lucide-react'
@@ -37,7 +38,7 @@ export const Variants: React.FC = () => {
 
   const fetchVariants = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/variants');
+      const res = await fetch(`${API_BASE_URL}/api/variants`);
       if (res.ok) {
         const data = await res.json();
         setVariantsList(data);
@@ -70,7 +71,7 @@ export const Variants: React.FC = () => {
 
     const values = formData.valuesString.split(',').map(v => v.trim()).filter(Boolean)
     try {
-      const res = await fetch('http://localhost:5000/api/variants', {
+      const res = await fetch(`${API_BASE_URL}/api/variants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: formData.name, values })
@@ -103,7 +104,7 @@ export const Variants: React.FC = () => {
       .filter(Boolean)
 
     try {
-      const res = await fetch(`http://localhost:5000/api/variants/${editingVariant.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/variants/${editingVariant.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -126,7 +127,7 @@ export const Variants: React.FC = () => {
     if (!deletingVariant) return
 
     try {
-      const res = await fetch(`http://localhost:5000/api/variants/${deletingVariant.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/variants/${deletingVariant.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -152,7 +153,7 @@ export const Variants: React.FC = () => {
     const newValues = [...targetVariant.values, newValueInput.trim()];
 
     try {
-      const res = await fetch(`http://localhost:5000/api/variants/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/variants/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ values: newValues })
@@ -176,7 +177,7 @@ export const Variants: React.FC = () => {
     const newValues = targetVariant.values.filter(val => val !== valToRemove);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/variants/${variantId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/variants/${variantId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ values: newValues })

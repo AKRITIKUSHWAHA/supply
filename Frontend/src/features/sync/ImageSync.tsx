@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -47,7 +48,7 @@ export const ImageSync: React.FC = () => {
 
   const fetchImages = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/sync/images')
+      const res = await fetch(`${API_BASE_URL}/api/sync/images`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setItems(data)
@@ -119,7 +120,7 @@ export const ImageSync: React.FC = () => {
     showNotification('Starting Image Workflow: Feed Import → Validation → WebP Conversion → CDN Publishing...')
 
     try {
-      const res = await fetch('http://localhost:5000/api/sync/images', { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/sync/images`, { method: 'POST' })
       if (res.ok) {
         await fetchImages()
         showNotification('Image Synchronization & CDN WebP publishing completed!')
@@ -138,7 +139,7 @@ export const ImageSync: React.FC = () => {
 
     try {
       // Use existing sync endpoint for individual retry as well for now
-      await fetch('http://localhost:5000/api/sync/images', { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/sync/images`, { method: 'POST' })
       await fetchImages()
       showNotification(`Image successfully recovered and published to CDN for SKU "${item.sku}"!`)
     } catch (err) {
@@ -152,7 +153,7 @@ export const ImageSync: React.FC = () => {
   const handleOptimizeImage = async (item: ImageAssetItem) => {
     setActiveItemId(item.id)
     try {
-      await fetch('http://localhost:5000/api/sync/images', { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/sync/images`, { method: 'POST' })
       await fetchImages()
       showNotification(`WebP compression re-optimized for SKU "${item.sku}".`)
     } catch (err) {

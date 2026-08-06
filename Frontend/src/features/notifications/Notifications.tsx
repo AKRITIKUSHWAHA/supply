@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import {
   Bell,
@@ -60,7 +61,7 @@ export const Notifications: React.FC = () => {
   const fetchNotifications = async () => {
     setLoading(true)
     try {
-      const url = new URL('http://localhost:5000/api/notifications')
+      const url = new URL(`${API_BASE_URL}/api/notifications`)
       if (search) url.searchParams.append('search', search)
       if (severityFilter !== 'all') url.searchParams.append('severity', severityFilter)
 
@@ -78,7 +79,7 @@ export const Notifications: React.FC = () => {
 
   const fetchPreferences = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/notifications/preferences')
+      const res = await fetch(`${API_BASE_URL}/api/notifications/preferences`)
       if (res.ok) {
         const data = await res.json()
         setPreferences(data || [])
@@ -93,7 +94,7 @@ export const Notifications: React.FC = () => {
     fetchPreferences()
 
     // Real-time SSE Connection
-    const eventSource = new EventSource('http://localhost:5000/api/notifications/stream')
+    const eventSource = new EventSource(`${API_BASE_URL}/api/notifications/stream`)
     eventSource.onmessage = (event) => {
       try {
         const newNotif = JSON.parse(event.data)
@@ -112,7 +113,7 @@ export const Notifications: React.FC = () => {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { method: 'PATCH' })
+      await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, { method: 'PATCH' })
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
     } catch (err) {
       console.error('Failed to mark read:', err)
@@ -121,7 +122,7 @@ export const Notifications: React.FC = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      await fetch('http://localhost:5000/api/notifications/read-all', { method: 'PATCH' })
+      await fetch(`${API_BASE_URL}/api/notifications/read-all`, { method: 'PATCH' })
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
       setToastMessage('All notifications marked as read')
       setTimeout(() => setToastMessage(null), 3000)
@@ -132,7 +133,7 @@ export const Notifications: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}`, { method: 'DELETE' })
+      await fetch(`${API_BASE_URL}/api/notifications/${id}`, { method: 'DELETE' })
       setNotifications((prev) => prev.filter((n) => n.id !== id))
     } catch (err) {
       console.error('Failed to delete notification:', err)
@@ -148,7 +149,7 @@ export const Notifications: React.FC = () => {
   const handleSavePreferences = async () => {
     setSavingPrefs(true)
     try {
-      const res = await fetch('http://localhost:5000/api/notifications/preferences', {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/preferences`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferences }),
@@ -167,7 +168,7 @@ export const Notifications: React.FC = () => {
   const handleTriggerTest = async () => {
     setTriggering(true)
     try {
-      const res = await fetch('http://localhost:5000/api/notifications/trigger-test', {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/trigger-test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventType: triggerType }),

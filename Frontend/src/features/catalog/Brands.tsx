@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Edit2, Trash2, Award, CheckCircle2 } from 'lucide-react'
@@ -37,7 +38,7 @@ export const Brands: React.FC = () => {
 
   const fetchBrands = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/brands');
+      const res = await fetch(`${API_BASE_URL}/api/brands`);
       if (res.ok) {
         const data = await res.json();
         setBrandsList(data);
@@ -70,7 +71,7 @@ export const Brands: React.FC = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/brands', {
+      const res = await fetch(`${API_BASE_URL}/api/brands`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -101,7 +102,7 @@ export const Brands: React.FC = () => {
     if (!editingBrand || !formData.name.trim()) return
 
     try {
-      const res = await fetch(`http://localhost:5000/api/brands/${editingBrand.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/brands/${editingBrand.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -121,7 +122,7 @@ export const Brands: React.FC = () => {
     if (!deletingBrand) return
 
     try {
-      const res = await fetch(`http://localhost:5000/api/brands/${deletingBrand.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/brands/${deletingBrand.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

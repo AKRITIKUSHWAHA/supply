@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserPlus, Ban, CheckCircle2, Mail, Eye, ShieldCheck, AlertCircle, AlertTriangle } from 'lucide-react'
@@ -45,7 +46,7 @@ export const Users: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/users')
+      const res = await fetch(`${API_BASE_URL}/api/users`)
       const json = await res.json()
       if (json && json.data && Array.isArray(json.data.users)) {
         const mapped = json.data.users.map((u: any) => ({
@@ -147,7 +148,7 @@ export const Users: React.FC = () => {
     }
 
     try {
-      await fetch('http://localhost:5000/api/users', {
+      await fetch(`${API_BASE_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -174,7 +175,7 @@ export const Users: React.FC = () => {
       prev.map(u => (u.id === user.id ? { ...u, status: nextStatus } : u))
     )
     try {
-      await fetch(`http://localhost:5000/api/users/${user.id}`, {
+      await fetch(`${API_BASE_URL}/api/users/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),

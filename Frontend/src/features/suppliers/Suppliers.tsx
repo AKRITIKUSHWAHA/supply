@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -121,8 +122,8 @@ export const Suppliers: React.FC = () => {
   const handleSyncAll = async () => {
     setIsSyncingAll(true)
     try {
-      await fetch('http://localhost:5000/api/suppliers/sync-all', { method: 'POST' })
-      const res = await fetch('http://localhost:5000/api/suppliers')
+      await fetch(`${API_BASE_URL}/api/suppliers/sync-all`, { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/suppliers`)
       const data = await res.json()
       if (Array.isArray(data)) setSuppliersList(data)
       showNotification('All suppliers synchronized successfully!')
@@ -136,8 +137,8 @@ export const Suppliers: React.FC = () => {
   const handleSyncSingle = async (id: string, name: string) => {
     setSyncingSupplierId(id)
     try {
-      await fetch(`http://localhost:5000/api/suppliers/${id}/sync`, { method: 'POST' })
-      const res = await fetch('http://localhost:5000/api/suppliers')
+      await fetch(`${API_BASE_URL}/api/suppliers/${id}/sync`, { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/suppliers`)
       const data = await res.json()
       if (Array.isArray(data)) setSuppliersList(data)
       showNotification(`Supplier "${name}" synchronized successfully!`)
@@ -153,7 +154,7 @@ export const Suppliers: React.FC = () => {
     if (!current) return
     const nextStatus: SupplierStatus = current.status === 'connected' ? 'disconnected' : 'connected'
     try {
-      const res = await fetch(`http://localhost:5000/api/suppliers/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/suppliers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
@@ -186,7 +187,7 @@ export const Suppliers: React.FC = () => {
         })
       }
 
-      const res = await fetch('http://localhost:5000/api/suppliers', {
+      const res = await fetch(`${API_BASE_URL}/api/suppliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -257,7 +258,7 @@ export const Suppliers: React.FC = () => {
   const handleSaveEdit = async () => {
     if (!editingSupplier) return
     try {
-      const res = await fetch(`http://localhost:5000/api/suppliers/${editingSupplier.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/suppliers/${editingSupplier.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -292,7 +293,7 @@ export const Suppliers: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (!deletingSupplier) return
     try {
-      await fetch(`http://localhost:5000/api/suppliers/${deletingSupplier.id}`, { method: 'DELETE' })
+      await fetch(`${API_BASE_URL}/api/suppliers/${deletingSupplier.id}`, { method: 'DELETE' })
       setSuppliersList(prev => prev.filter(s => s.id !== deletingSupplier.id))
       showNotification(`Supplier "${deletingSupplier.name}" deleted.`)
     } catch (err) {
@@ -912,7 +913,7 @@ const SupplierDetail: React.FC<{
     setTestResult(null)
     
     try {
-      const res = await fetch(`http://localhost:5000/api/suppliers/${supplier.id}/test`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/api/suppliers/${supplier.id}/test`, { method: 'POST' });
       const data = await res.json();
       
       if (res.ok && data.success) {

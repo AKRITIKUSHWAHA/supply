@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { Plus, Search, Building2, Edit3, Trash2, CheckCircle2 } from 'lucide-react'
 import { Badge } from '../../components/ui/Badge'
@@ -25,7 +26,7 @@ export const Manufacturers: React.FC = () => {
 
   const fetchManufacturers = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/manufacturers');
+      const res = await fetch(`${API_BASE_URL}/api/manufacturers`);
       if (res.ok) {
         const data = await res.json();
         setManufacturers(data);
@@ -58,7 +59,7 @@ export const Manufacturers: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/manufacturers/${id}`, {
+      await fetch(`${API_BASE_URL}/api/manufacturers/${id}`, {
         method: 'DELETE'
       });
       await fetchManufacturers();
@@ -73,13 +74,13 @@ export const Manufacturers: React.FC = () => {
 
     try {
       if (editingId) {
-        await fetch(`http://localhost:5000/api/manufacturers/${editingId}`, {
+        await fetch(`${API_BASE_URL}/api/manufacturers/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
       } else {
-        await fetch('http://localhost:5000/api/manufacturers', {
+        await fetch(`${API_BASE_URL}/api/manufacturers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)

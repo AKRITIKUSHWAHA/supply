@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plug, CheckCircle2, AlertCircle, Clock, Settings, RefreshCw, Plus, Check, Globe, Database, FileText, Lock, Key, Server, Terminal, ShieldCheck, Play, ArrowRight, Layers, ExternalLink, X, Zap } from 'lucide-react'
@@ -62,7 +63,7 @@ export const Integrations: React.FC = () => {
 
   const fetchIntegrations = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/integrations')
+      const res = await fetch(`${API_BASE_URL}/api/integrations`)
       const data = await res.json()
       if (data.typesList) setTypesList(data.typesList)
       if (data.events) setEvents(data.events)
@@ -83,7 +84,7 @@ export const Integrations: React.FC = () => {
       setTimeout(() => setActiveStep(2), 1200)
       setTimeout(() => setActiveStep(3), 2400)
 
-      const res = await fetch('http://localhost:5000/api/integrations/e2e-pipeline-test', {
+      const res = await fetch(`${API_BASE_URL}/api/integrations/e2e-pipeline-test`, {
         method: 'POST',
       })
       const data = await res.json()
@@ -120,7 +121,7 @@ export const Integrations: React.FC = () => {
     if (!selectedType) return
 
     try {
-      const res = await fetch(`http://localhost:5000/api/integrations/${selectedType.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/integrations/${selectedType.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,7 +146,7 @@ export const Integrations: React.FC = () => {
   const handleTestProtocol = async (type: IntegrationType) => {
     setTestingId(type.id)
     try {
-      const res = await fetch(`http://localhost:5000/api/integrations/test`, {
+      const res = await fetch(`${API_BASE_URL}/api/integrations/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: type.id }),
@@ -167,7 +168,7 @@ export const Integrations: React.FC = () => {
     if (!newLabel.trim()) return
 
     try {
-      const res = await fetch('http://localhost:5000/api/integrations', {
+      const res = await fetch(`${API_BASE_URL}/api/integrations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newLabel, newType, newDesc }),

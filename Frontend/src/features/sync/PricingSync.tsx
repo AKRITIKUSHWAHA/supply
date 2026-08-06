@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DollarSign, TrendingUp, TrendingDown, RefreshCw, Plus, Edit2, Trash2, CheckCircle2, FileSpreadsheet, Filter, X } from 'lucide-react'
@@ -35,12 +36,12 @@ export const PricingSync: React.FC = () => {
   const [auditRecords, setAuditRecords] = useState<PricingAuditRecord[]>(INITIAL_AUDIT_RECORDS)
   
   React.useEffect(() => {
-    fetch('http://localhost:5000/api/pricing/rules')
+    fetch(`${API_BASE_URL}/api/pricing/rules`)
       .then(res => res.json())
       .then(data => setRulesList(data))
       .catch(err => console.error('Failed to load rules:', err))
       
-    fetch('http://localhost:5000/api/pricing/audits')
+    fetch(`${API_BASE_URL}/api/pricing/audits`)
       .then(res => res.json())
       .then(data => setAuditRecords(data))
       .catch(err => console.error('Failed to load audits:', err))
@@ -99,10 +100,10 @@ export const PricingSync: React.FC = () => {
     setSyncing(true)
     showNotification('Initializing price update pipeline to storefronts...')
     try {
-      const res = await fetch('http://localhost:5000/api/pricing/sync', { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/api/pricing/sync`, { method: 'POST' });
       if (res.ok) {
         // Fetch fresh data from backend
-        const freshData = await fetch('http://localhost:5000/api/pricing/audits').then(r => r.json());
+        const freshData = await fetch(`${API_BASE_URL}/api/pricing/audits`).then(r => r.json());
         setAuditRecords(freshData);
         showNotification(`Pricing synchronization complete! All pending storefront prices updated.`)
       }
@@ -126,7 +127,7 @@ export const PricingSync: React.FC = () => {
       return
     }
     
-    fetch('http://localhost:5000/api/pricing/rules', {
+    fetch(`${API_BASE_URL}/api/pricing/rules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ruleFormData)
@@ -153,7 +154,7 @@ export const PricingSync: React.FC = () => {
   const handleSaveEditRule = () => {
     if (!editingRule || !ruleFormData.name.trim() || !ruleFormData.formula.trim()) return
 
-    fetch(`http://localhost:5000/api/pricing/rules/${editingRule.id}`, {
+    fetch(`${API_BASE_URL}/api/pricing/rules/${editingRule.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ruleFormData)
@@ -177,7 +178,7 @@ export const PricingSync: React.FC = () => {
   const handleConfirmDeleteRule = () => {
     if (!deletingRule) return
 
-    fetch(`http://localhost:5000/api/pricing/rules/${deletingRule.id}`, {
+    fetch(`${API_BASE_URL}/api/pricing/rules/${deletingRule.id}`, {
       method: 'DELETE'
     })
     .then(() => {

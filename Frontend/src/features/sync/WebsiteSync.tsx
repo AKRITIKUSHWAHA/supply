@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -61,7 +62,7 @@ export const WebsiteSync: React.FC = () => {
 
     try {
       const key = addFormData.storeKey.trim() || addFormData.name.toLowerCase().replace(/[^a-z0-9]/g, '_')
-      const res = await fetch('http://localhost:5000/api/stores', {
+      const res = await fetch(`${API_BASE_URL}/api/stores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,7 +92,7 @@ export const WebsiteSync: React.FC = () => {
 
   const fetchStores = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/stores')
+      const res = await fetch(`${API_BASE_URL}/api/stores`)
       const data = await res.json()
       if (Array.isArray(data)) {
         const mapped = data.map((s: any) => ({
@@ -159,7 +160,7 @@ export const WebsiteSync: React.FC = () => {
 
     try {
       await Promise.all(selectedStoreIds.map(id => 
-        fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
+        fetch(`${API_BASE_URL}/api/stores/${id}/sync`, { method: 'POST' })
       ));
       await fetchStores();
       setSelectedStoreIds([])
@@ -179,7 +180,7 @@ export const WebsiteSync: React.FC = () => {
     try {
       const storeIds = storesList.map(s => s.id);
       await Promise.all(storeIds.map(id => 
-        fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
+        fetch(`${API_BASE_URL}/api/stores/${id}/sync`, { method: 'POST' })
       ));
       await fetchStores();
       showNotification('All connected storefronts synchronized successfully!')
@@ -204,7 +205,7 @@ export const WebsiteSync: React.FC = () => {
 
     try {
       await Promise.all(failedList.map(store => 
-        fetch(`http://localhost:5000/api/stores/${store.id}/sync`, { method: 'POST' })
+        fetch(`${API_BASE_URL}/api/stores/${store.id}/sync`, { method: 'POST' })
       ));
       await fetchStores();
       showNotification('Failed storefront synchronization retried and completed successfully!')
@@ -221,7 +222,7 @@ export const WebsiteSync: React.FC = () => {
     )
 
     try {
-      await fetch(`http://localhost:5000/api/stores/${id}/sync`, { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/stores/${id}/sync`, { method: 'POST' })
       await fetchStores()
       showNotification(`Catalog published & synced successfully for "${name}"!`)
     } catch (err) {

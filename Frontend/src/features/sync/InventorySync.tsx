@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -31,7 +32,7 @@ export const InventorySync: React.FC = () => {
 
   const fetchInventory = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/sync/inventory')
+      const res = await fetch(`${API_BASE_URL}/api/sync/inventory`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setItems(data)
@@ -126,7 +127,7 @@ export const InventorySync: React.FC = () => {
     showNotification('Initiating global inventory stock sync for all connected suppliers...')
 
     try {
-      const res = await fetch('http://localhost:5000/api/sync/inventory', { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/sync/inventory`, { method: 'POST' })
       if (res.ok) {
         await fetchInventory()
         showNotification('Global Inventory Stock Sync completed successfully!')
@@ -143,7 +144,7 @@ export const InventorySync: React.FC = () => {
     setSyncingItemId(id)
 
     try {
-      await fetch('http://localhost:5000/api/sync/inventory', { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/sync/inventory`, { method: 'POST' })
       await fetchInventory()
       showNotification(`Stock levels synchronized successfully for "${name}"!`)
     } catch (err) {

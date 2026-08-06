@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -57,7 +58,7 @@ export const StoreManagement: React.FC = () => {
 
   const fetchStores = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/stores')
+      const res = await fetch(`${API_BASE_URL}/api/stores`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setStoresList(data)
@@ -80,7 +81,7 @@ export const StoreManagement: React.FC = () => {
   const handlePushSyncStore = async (id: string, name: string) => {
     setSyncingStoreId(id)
     try {
-      const res = await fetch(`http://localhost:5000/api/stores/${id}/push-sync`, {
+      const res = await fetch(`${API_BASE_URL}/api/stores/${id}/push-sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ syncType: 'FULL' }),
@@ -98,7 +99,7 @@ export const StoreManagement: React.FC = () => {
   const handlePushInventory = async (id: string, name: string) => {
     setSyncingStoreId(id)
     try {
-      await fetch(`http://localhost:5000/api/stores/${id}/push-inventory`, { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/stores/${id}/push-inventory`, { method: 'POST' })
       showNotification(`Inventory stock pushed successfully to ${name}!`)
       fetchStores()
     } catch (err) {
@@ -111,7 +112,7 @@ export const StoreManagement: React.FC = () => {
   const handlePushPricing = async (id: string, name: string) => {
     setSyncingStoreId(id)
     try {
-      await fetch(`http://localhost:5000/api/stores/${id}/push-pricing`, { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/stores/${id}/push-pricing`, { method: 'POST' })
       showNotification(`Price updates pushed successfully to ${name}!`)
       fetchStores()
     } catch (err) {
@@ -125,7 +126,7 @@ export const StoreManagement: React.FC = () => {
     e.stopPropagation()
     setTestingStoreId(id)
     try {
-      const res = await fetch(`http://localhost:5000/api/stores/${id}/test-connection`, { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/stores/${id}/test-connection`, { method: 'POST' })
       const result = await res.json()
       showNotification(`Connection Verified: ${result.message}`)
       fetchStores()
@@ -161,7 +162,7 @@ export const StoreManagement: React.FC = () => {
 
     try {
       const key = formData.storeKey.trim() || formData.name.toLowerCase().replace(/[^a-z0-9]/g, '_')
-      const res = await fetch('http://localhost:5000/api/stores', {
+      const res = await fetch(`${API_BASE_URL}/api/stores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -209,7 +210,7 @@ export const StoreManagement: React.FC = () => {
     if (!editingStore || !formData.name.trim() || !formData.url.trim()) return
 
     try {
-      const res = await fetch(`http://localhost:5000/api/stores/${editingStore.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/stores/${editingStore.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -236,7 +237,7 @@ export const StoreManagement: React.FC = () => {
     if (!deletingStore) return
 
     try {
-      await fetch(`http://localhost:5000/api/stores/${deletingStore.id}`, { method: 'DELETE' })
+      await fetch(`${API_BASE_URL}/api/stores/${deletingStore.id}`, { method: 'DELETE' })
       setStoresList((prev) => prev.filter((s) => s.id !== deletingStore.id))
       showNotification(`Storefront "${deletingStore.name}" connection removed.`)
     } catch (err) {

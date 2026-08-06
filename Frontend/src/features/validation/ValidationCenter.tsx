@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -42,7 +43,7 @@ export const ValidationCenter: React.FC = () => {
 
   const fetchValidationItems = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/validation')
+      const res = await fetch(`${API_BASE_URL}/api/validation`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setItems(data)
@@ -150,7 +151,7 @@ export const ValidationCenter: React.FC = () => {
       return
     }
     try {
-      const res = await fetch(`http://localhost:5000/api/validation/${id}/resolve`, { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/validation/${id}/resolve`, { method: 'POST' })
       if (!res.ok) {
         const err = await res.json()
         setToastMessage({ text: err.error || 'Approval failed.', type: 'error' })
@@ -167,7 +168,7 @@ export const ValidationCenter: React.FC = () => {
 
   const handleRejectSingle = async (id: string, name?: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/validation/${id}/reject`, { method: 'POST' })
+      const res = await fetch(`${API_BASE_URL}/api/validation/${id}/reject`, { method: 'POST' })
       if (!res.ok) {
         const err = await res.json()
         setToastMessage({ text: err.error || 'Rejection failed.', type: 'error' })
@@ -195,7 +196,7 @@ export const ValidationCenter: React.FC = () => {
       return
     }
     for (const id of selectedIds) {
-      await fetch(`http://localhost:5000/api/validation/${id}/resolve`, { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/validation/${id}/resolve`, { method: 'POST' })
     }
     setItems(prev =>
       prev.map(item => (selectedIds.includes(item.id) ? { ...item, status: 'approved' } : item))
@@ -207,7 +208,7 @@ export const ValidationCenter: React.FC = () => {
   const handleBulkReject = async () => {
     if (selectedIds.length === 0) return
     for (const id of selectedIds) {
-      await fetch(`http://localhost:5000/api/validation/${id}/reject`, { method: 'POST' })
+      await fetch(`${API_BASE_URL}/api/validation/${id}/reject`, { method: 'POST' })
     }
     setItems(prev =>
       prev.map(item => (selectedIds.includes(item.id) ? { ...item, status: 'rejected' } : item))
@@ -262,7 +263,7 @@ export const ValidationCenter: React.FC = () => {
     const errorEntry = targetItem?.errors[errorIndex]
     if (errorEntry?.id) {
       try {
-        await fetch(`http://localhost:5000/api/validation/${errorEntry.id}`, { method: 'DELETE' })
+        await fetch(`${API_BASE_URL}/api/validation/${errorEntry.id}`, { method: 'DELETE' })
       } catch { /* ignore */ }
     }
     setItems(prev =>
@@ -286,7 +287,7 @@ export const ValidationCenter: React.FC = () => {
       for (const err of targetItem.errors) {
         if (err.id) {
           try {
-            await fetch(`http://localhost:5000/api/validation/${err.id}`, { method: 'DELETE' })
+            await fetch(`${API_BASE_URL}/api/validation/${err.id}`, { method: 'DELETE' })
           } catch { /* ignore */ }
         }
       }

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, PlayCircle, CheckCircle2, XCircle, Clock, RotateCcw, FileSpreadsheet, Terminal, PauseCircle, Play, Layers, Eye } from 'lucide-react'
@@ -28,7 +29,7 @@ export const SyncJobs: React.FC = () => {
 
   const fetchJobs = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/sync/jobs')
+      const res = await fetch(`${API_BASE_URL}/api/sync/jobs`)
       const data = await res.json()
       if (Array.isArray(data)) {
         setJobsList(data)
@@ -52,7 +53,7 @@ export const SyncJobs: React.FC = () => {
   // 1. Manual Trigger Sync (Creates running job, updates counters immediately)
   const handleTriggerSync = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/sync/jobs', {
+      const res = await fetch(`${API_BASE_URL}/api/sync/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Full Catalog Resync', type: 'full' })
@@ -68,7 +69,7 @@ export const SyncJobs: React.FC = () => {
   // 2. Retry Failed Jobs (Toolbar action & single row action)
   const handleRetryJob = async (id: string, name: string) => {
     try {
-      await fetch('http://localhost:5000/api/sync/jobs', {
+      await fetch(`${API_BASE_URL}/api/sync/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: `Retry ${name}`, type: 'full' })
@@ -86,7 +87,7 @@ export const SyncJobs: React.FC = () => {
     showNotification(`Re-queueing ${failedJobs.length} failed sync job(s)...`)
 
     try {
-      await fetch('http://localhost:5000/api/sync/jobs', {
+      await fetch(`${API_BASE_URL}/api/sync/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Retry All Failed Jobs', type: 'full' })
@@ -105,7 +106,7 @@ export const SyncJobs: React.FC = () => {
     showNotification(`Syncing ${selectedCount} selected supplier job(s)...`)
 
     try {
-      await fetch('http://localhost:5000/api/sync/jobs', {
+      await fetch(`${API_BASE_URL}/api/sync/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Selected Suppliers Sync', type: 'inventory' })
@@ -123,7 +124,7 @@ export const SyncJobs: React.FC = () => {
     showNotification('Synchronizing all active suppliers...')
 
     try {
-      await fetch('http://localhost:5000/api/sync/jobs', {
+      await fetch(`${API_BASE_URL}/api/sync/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'All Suppliers Sync', type: 'inventory' })
@@ -176,7 +177,7 @@ export const SyncJobs: React.FC = () => {
   const handleRebuildCatalog = async () => {
     showNotification('Rebuilding master product catalog indexes...')
     try {
-      await fetch('http://localhost:5000/api/sync/jobs', {
+      await fetch(`${API_BASE_URL}/api/sync/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Catalog Rebuild', type: 'full' })

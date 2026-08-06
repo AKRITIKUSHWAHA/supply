@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -23,7 +24,7 @@ export const AppShell: React.FC = () => {
 
   const checkMaintenanceStatus = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/settings')
+      const res = await fetch(`${API_BASE_URL}/api/settings`)
       const data = await res.json()
       if (data && data.maintenanceMode !== undefined) {
         setMaintenanceMode(data.maintenanceMode)

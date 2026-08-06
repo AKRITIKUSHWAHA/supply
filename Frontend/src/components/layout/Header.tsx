@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -169,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, darkMode, onToggleD
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/notifications?limit=5', {
+        const res = await fetch(`${API_BASE_URL}/api/notifications?limit=5`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}` }
         })
         const result = await res.json()
@@ -179,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, darkMode, onToggleD
           setNotifications(result)
         }
         
-        const countRes = await fetch('http://localhost:5000/api/notifications/unread-count', {
+        const countRes = await fetch(`${API_BASE_URL}/api/notifications/unread-count`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('supplybridge_token')}` }
         })
         const countData = await countRes.json()
@@ -194,7 +195,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, darkMode, onToggleD
     fetchNotifications()
 
     const token = localStorage.getItem('supplybridge_token');
-    const eventSource = new EventSource(`http://localhost:5000/api/notifications/stream?token=${token}`);
+    const eventSource = new EventSource(`${API_BASE_URL}/api/notifications/stream?token=${token}`);
     
     eventSource.onmessage = (event) => {
       try {

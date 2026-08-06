@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config/api'
 import React, { createContext, useContext, useState } from 'react'
 import type { UserRole, User } from '../types'
 import { Lock, Mail, Shield, Zap, ArrowRight, CheckCircle2, UserCheck, Layers, RefreshCw, Globe, Database, ShieldCheck } from 'lucide-react'
@@ -145,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     e.preventDefault()
     setIsLoggingIn(true)
 
-    fetch('http://localhost:5000/api/auth/login', {
+    fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })

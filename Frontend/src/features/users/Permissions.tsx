@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -88,7 +89,7 @@ export const Permissions: React.FC = () => {
     try {
       const promises = Object.entries(permissionsConfig).map(([roleId, perms]) => {
         if (roleId === 'platform_owner') return Promise.resolve();
-        return fetch(`http://localhost:5000/api/roles/${roleId}`, {
+        return fetch(`${API_BASE_URL}/api/roles/${roleId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ permissions: perms })
