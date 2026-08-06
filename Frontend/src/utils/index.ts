@@ -66,14 +66,14 @@ export function getInitials(name: string): string {
 }
 
 export function getFirstAccessibleRoute(hasPermission: (module: string) => boolean): string {
-  if (hasPermission('dashboard')) return '/'
-  if (hasPermission('suppliers')) return '/suppliers'
-  if (hasPermission('products') || hasPermission('catalog')) return '/catalog/products'
+  if (hasPermission('products')) return '/catalog/products'
   if (hasPermission('categories')) return '/catalog/categories'
   if (hasPermission('brands')) return '/catalog/brands'
   if (hasPermission('manufacturers')) return '/catalog/manufacturers'
   if (hasPermission('variants')) return '/catalog/variants'
   if (hasPermission('media')) return '/catalog/media'
+  if (hasPermission('dashboard')) return '/'
+  if (hasPermission('suppliers')) return '/suppliers'
   if (hasPermission('integrations')) return '/integrations'
   if (hasPermission('store_management')) return '/stores'
   if (hasPermission('mapping')) return '/mapping/products'
@@ -90,5 +90,5 @@ export function getFirstAccessibleRoute(hasPermission: (module: string) => boole
   if (hasPermission('roles')) return '/roles'
   if (hasPermission('permissions')) return '/permissions'
   if (hasPermission('settings')) return '/settings'
-  return '/'
+  return '/catalog/categories'
 }
